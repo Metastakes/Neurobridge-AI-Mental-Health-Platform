@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 // Fix: Add file extensions to imports to resolve module errors.
 import { Mentor, Provider, ChatMessage } from '../types.ts';
-import { LogOut, ChevronRight } from '../Icons.tsx';
+import { LogOut, ChevronRight } from './Icons.tsx';
 import MentorMenteeDetail from './mentor/MentorMenteeDetail.tsx';
-import ThemeToggle from '../ThemeToggle.tsx';
+import ThemeToggle from './ThemeToggle.tsx';
 import useInactivityLogout from '../hooks/useInactivityLogout.ts';
 
 interface MentorDashboardProps {

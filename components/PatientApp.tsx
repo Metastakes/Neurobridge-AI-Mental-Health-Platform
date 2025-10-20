@@ -13,7 +13,8 @@ import PatientProgress from './patient/PatientProgress.tsx';
 import PatientOnboarding from './patient/PatientOnboarding.tsx';
 import useInactivityLogout from '../hooks/useInactivityLogout.ts';
 // Fix: Aliased User icon import to UserIcon to resolve name conflict with User type.
-import { Home, User as UserIcon, LogOut, Award, Gift, BarChart2, MessageSquare, Calendar } from './Icons.tsx';
+// Fix: Add ArrowLeft icon for improved navigation.
+import { Home, User as UserIcon, LogOut, Award, Gift, BarChart2, MessageSquare, Calendar, ArrowLeft } from './Icons.tsx';
 
 interface PatientAppProps {
   patient: Patient;
@@ -83,26 +84,33 @@ const PatientApp: React.FC<PatientAppProps> = ({ patient, onLogout, onUpdatePati
     <button
       onClick={() => setActiveView(view)}
       className={`flex flex-col items-center justify-center w-full p-2 rounded-lg transition-colors ${activeView === view ? 'bg-teal-100 text-teal-600 dark:bg-teal-900 dark:text-teal-300' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'}`}
+      aria-current={activeView === view}
     >
       {icon}
       <span className="text-xs font-semibold">{label}</span>
     </button>
   );
   
-  const mainViews: PatientView[] = ['dashboard', 'progress', 'rewards', 'achievements', 'profile'];
+  // Fix: Align mainViews with the views present in the bottom navigation bar for consistent UI.
+  const mainViews: PatientView[] = ['dashboard', 'schedule', 'messages', 'progress', 'profile'];
   const showBottomNav = patient.details.onboardingComplete && mainViews.includes(activeView);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-slate-900 font-sans">
         {patient.details.onboardingComplete && (
-            <header className="flex justify-between items-center p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 shadow-sm sticky top-0 z-10">
-                 <h1 className="text-xl font-bold text-gray-800 dark:text-gray-200 capitalize">{activeView}</h1>
+            // Fix: Improved header layout to center title and correctly position an icon-based back button.
+            <header className="relative flex justify-center items-center p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 shadow-sm sticky top-0 z-10">
                  {/* Back arrow for non-main views */}
                  {!mainViews.includes(activeView) && (
-                     <button onClick={() => setActiveView('dashboard')} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100">
-                         &larr; Back
+                     <button 
+                        onClick={() => setActiveView('dashboard')} 
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full"
+                        aria-label="Go back to dashboard"
+                     >
+                         <ArrowLeft className="w-5 h-5" />
                      </button>
                  )}
+                 <h1 className="text-xl font-bold text-gray-800 dark:text-gray-200 capitalize">{activeView}</h1>
             </header>
         )}
       <main className={`flex-grow overflow-y-auto ${showBottomNav ? 'pb-20' : ''}`}>
