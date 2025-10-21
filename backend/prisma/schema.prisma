@@ -1,0 +1,493 @@
+// Prisma Schema for NeuroBridge AI Mental Health Platform
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  PATIENT
+  PROVIDER
+  MENTOR
+  ADMIN
+}
+
+enum AlertStatus {
+  STABLE
+  NEW_MESSAGE
+  EMERGENCY
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum MedicationStatus {
+  ACTIVE
+  DISCONTINUED
+  PAUSED
+}
+
+enum GamificationEventType {
+  SESSION_COMPLETED
+  MEDICATION_ADHERENCE
+  SIDE_EFFECT_REPORT
+  SAFETY_CHECK
+  LAB_COMPLETED
+  ACHIEVEMENT_UNLOCKED
+}
+
+enum BillingCodeType {
+  EM_CODE
+  CPT
+  MODIFIER
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String?  // Nullable for OAuth-only users
+  role          UserRole
+  firstName     String
+  lastName      String
+  phone         String?
+  avatar        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime?
+  mfaEnabled    Boolean  @default(false)
+  mfaSecret     String?
+
+  // OAuth fields
+  googleId      String?  @unique
+
+  // Relationships based on role
+  patient       Patient?
+  provider      Provider?
+  mentor        Mentor?
+
+  // Audit trail
+  auditLogs     AuditLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// ============================================
+// PATIENT MODEL
+// ============================================
+
+model Patient {
+  id                String        @id @default(cuid())
+  userId            String        @unique
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Demographics
+  dateOfBirth       DateTime
+  sex               String?
+  address           String?
+  city              String?
+  state             String?
+  zipCode           String?
+  emergencyContact  String?
+  emergencyPhone    String?
+
+  // Clinical
+  diagnoses         Diagnosis[]
+  medications       Medication[]
+  allergies         Allergy[]
+
+  // Pharmacy
+  pharmacyName      String?
+  pharmacyPhone     String?
+  pharmacyAddress   String?
+
+  // Biometrics
+  height            Float?        // inches
+  weight            Float?        // pounds
+
+  // Status
+  alertStatus       AlertStatus   @default(STABLE)
+  onboardingComplete Boolean      @default(false)
+
+  // Assignments
+  providerId        String?
+  provider          Provider?     @relation(fields: [providerId], references: [id])
+
+  // Related records
+  encounters        Encounter[]
+  messages          Message[]
+  gamificationEvents GamificationEvent[]
+  achievements      PatientAchievement[]
+  signedDocuments   SignedDocument[]
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([providerId])
+}
+
+// ============================================
+// PROVIDER MODEL
+// ============================================
+
+model Provider {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Credentials
+  npiNumber         String?   @unique
+  licenseNumber     String?
+  licenseState      String?
+  deaNumber         String?
+
+  // Assignments
+  mentorId          String?
+  mentor            Mentor?   @relation(fields: [mentorId], references: [id])
+
+  // Related records
+  patients          Patient[]
+  encounters        Encounter[]
+  caseNotes         CaseNote[]
+  messagesReceived  Message[]
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([mentorId])
+}
+
+// ============================================
+// MENTOR MODEL
+// ============================================
+
+model Mentor {
+  id                String     @id @default(cuid())
+  userId            String     @unique
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Credentials
+  npiNumber         String?    @unique
+  licenseNumber     String?
+
+  // Relationships
+  mentees           Provider[]
+  chartAudits       ChartAudit[]
+
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+// ============================================
+// CLINICAL RECORDS
+// ============================================
+
+model Diagnosis {
+  id            String   @id @default(cuid())
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  icdCode       String   // e.g., F32.9
+  description   String   // e.g., "Major Depressive Disorder"
+  diagnosedAt   DateTime @default(now())
+  isPrimary     Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([patientId])
+}
+
+model Medication {
+  id            String           @id @default(cuid())
+  patientId     String
+  patient       Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  name          String
+  dosage        String           // e.g., "20mg"
+  frequency     String           // e.g., "Once daily"
+  category      String?          // e.g., "SSRI", "Anxiolytic"
+  prescribedAt  DateTime         @default(now())
+  status        MedicationStatus @default(ACTIVE)
+
+  // Tracking
+  startedAt     DateTime?
+  stoppedAt     DateTime?
+  prescriberId  String?
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([patientId])
+  @@index([status])
+}
+
+model Allergy {
+  id            String   @id @default(cuid())
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  allergen      String   // e.g., "Penicillin"
+  reaction      String?  // e.g., "Hives"
+  severity      Int      // 1-10 scale
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([patientId])
+}
+
+// ============================================
+// ENCOUNTERS & SCHEDULING
+// ============================================
+
+model Encounter {
+  id                String             @id @default(cuid())
+  patientId         String
+  patient           Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  providerId        String
+  provider          Provider           @relation(fields: [providerId], references: [id])
+
+  scheduledAt       DateTime
+  completedAt       DateTime?
+  status            AppointmentStatus  @default(SCHEDULED)
+
+  // Virtual visit details
+  meetLink          String?
+  meetEventId       String?            // Google Calendar Event ID
+
+  // Clinical documentation
+  caseNotes         CaseNote[]
+  billingCodes      BillingCode[]
+
+  // Duration (for billing)
+  durationMinutes   Int?
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([scheduledAt])
+}
+
+model CaseNote {
+  id            String    @id @default(cuid())
+  encounterId   String
+  encounter     Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  providerId    String
+  provider      Provider  @relation(fields: [providerId], references: [id])
+
+  // SOAP format
+  subjective    String?   // Patient's description
+  objective     String?   // Provider's observations
+  assessment    String?   // Clinical assessment
+  plan          String?   // Treatment plan
+
+  // AI metadata
+  generatedByAI Boolean   @default(false)
+  aiModelUsed   String?   // e.g., "gemini-pro"
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([encounterId])
+  @@index([providerId])
+}
+
+// ============================================
+// BILLING & COMPLIANCE
+// ============================================
+
+model BillingCode {
+  id            String          @id @default(cuid())
+  encounterId   String
+  encounter     Encounter       @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  code          String          // e.g., "99214", "95", "G2211"
+  type          BillingCodeType
+  description   String?
+  basis         String?         // e.g., "MDM", "Time"
+  rationale     String?
+
+  createdAt     DateTime        @default(now())
+
+  @@index([encounterId])
+}
+
+model ChartAudit {
+  id            String   @id @default(cuid())
+  mentorId      String
+  mentor        Mentor   @relation(fields: [mentorId], references: [id])
+
+  providerId    String
+  patientId     String
+  encounterId   String?
+
+  findings      String
+  recommendations String?
+
+  createdAt     DateTime @default(now())
+
+  @@index([mentorId])
+  @@index([providerId])
+}
+
+// ============================================
+// MESSAGING
+// ============================================
+
+model Message {
+  id            String   @id @default(cuid())
+
+  // Sender/Receiver
+  senderId      String
+  recipientId   String
+  recipientType String   // "PATIENT", "PROVIDER", "MENTOR"
+
+  // Content
+  text          String
+  read          Boolean  @default(false)
+
+  // Patient relationship (if sender or recipient is patient)
+  patientId     String?
+  patient       Patient? @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  // Provider relationship (if sender or recipient is provider)
+  providerId    String?
+  provider      Provider? @relation(fields: [providerId], references: [id])
+
+  createdAt     DateTime @default(now())
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([patientId])
+  @@index([providerId])
+  @@index([createdAt])
+}
+
+// ============================================
+// GAMIFICATION
+// ============================================
+
+model Achievement {
+  id          String   @id @default(cuid())
+  key         String   @unique  // e.g., "safety_expert", "streak_7"
+  name        String
+  description String
+  icon        String?
+  points      Int      @default(0)
+
+  // Relationships
+  unlockedBy  PatientAchievement[]
+}
+
+model PatientAchievement {
+  id            String      @id @default(cuid())
+  patientId     String
+  patient       Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([patientId, achievementId])
+  @@index([patientId])
+}
+
+model GamificationEvent {
+  id          String                 @id @default(cuid())
+  patientId   String
+  patient     Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  eventType   GamificationEventType
+  points      Int                    @default(0)
+  metadata    Json?                  // Flexible field for event-specific data
+
+  createdAt   DateTime               @default(now())
+
+  @@index([patientId])
+  @@index([createdAt])
+}
+
+// ============================================
+// LEGAL & DOCUMENTS
+// ============================================
+
+model SignedDocument {
+  id          String   @id @default(cuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  documentType String  // e.g., "CONSENT", "HIPAA", "TELEHEALTH"
+  documentKey  String  // Reference to document version
+  signedAt    DateTime @default(now())
+  ipAddress   String?
+
+  @@index([patientId])
+}
+
+// ============================================
+// AUDIT & COMPLIANCE
+// ============================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  action      String   // e.g., "PATIENT_VIEWED", "MEDICATION_ADDED"
+  resource    String   // e.g., "Patient", "Medication"
+  resourceId  String?
+  metadata    Json?    // Additional context
+  ipAddress   String?
+  userAgent   String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ============================================
+// AI & SAFETY
+// ============================================
+
+model AISuggestion {
+  id              String   @id @default(cuid())
+
+  // Context
+  patientId       String
+  providerId      String?
+  encounterId     String?
+
+  // Input/Output
+  prompt          String
+  response        Json     // Structured AI response
+  modelUsed       String   // e.g., "gemini-pro"
+
+  // Safety metadata
+  safetyScore     Float?
+  flaggedConcerns String[]
+
+  createdAt       DateTime @default(now())
+
+  @@index([patientId])
+  @@index([createdAt])
+}

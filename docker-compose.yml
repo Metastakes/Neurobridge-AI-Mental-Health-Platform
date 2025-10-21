@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: neurobridge-db
+    environment:
+      POSTGRES_USER: neurobridge
+      POSTGRES_PASSWORD: neurobridge_dev_password
+      POSTGRES_DB: neurobridge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neurobridge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # NestJS Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: neurobridge-backend
+    environment:
+      DATABASE_URL: "postgresql://neurobridge:neurobridge_dev_password@postgres:5432/neurobridge?schema=public"
+      JWT_SECRET: "your-dev-secret-change-in-production"
+      JWT_EXPIRES_IN: "7d"
+      NODE_ENV: "development"
+      PORT: 3000
+      FRONTEND_URL: "http://localhost:5173"
+      # Add your API keys here
+      GEMINI_API_KEY: "${GEMINI_API_KEY}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY}"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        npx prisma db seed &&
+        npm run start:dev
+      "
+
+  # React Frontend (Vite)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: neurobridge-frontend
+    environment:
+      VITE_API_URL: "http://localhost:3000/api"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: npm run dev
+
+volumes:
+  postgres_data:
+    driver: local
