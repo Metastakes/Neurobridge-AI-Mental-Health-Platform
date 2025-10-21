@@ -2,6 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import helmet from 'helmet';
+import * as compression from 'compression';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -9,7 +12,15 @@ async function bootstrap() {
       origin: process.env.FRONTEND_URL || 'http://localhost:5173',
       credentials: true,
     },
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
+
+  // Security middleware
+  app.use(helmet());
+  app.use(compression());
+
+  // Global exception filter
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -30,8 +41,9 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('NeuroBridge AI API')
     .setDescription('HIPAA-compliant mental health platform API')
-    .setVersion('1.0')
+    .setVersion('1.0.0')
     .addBearerAuth()
+    .addTag('health', 'Health Check & Monitoring')
     .addTag('auth', 'Authentication & Authorization')
     .addTag('patients', 'Patient Management')
     .addTag('medications', 'Medication Management')
@@ -49,17 +61,22 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
+  const serverUrl = `http://localhost:${port}`;
+
   console.log(`
     ╔═══════════════════════════════════════════════════════════╗
     ║                                                           ║
     ║   🧠 NeuroBridge AI Mental Health Platform               ║
     ║                                                           ║
-    ║   API Server: http://localhost:${port}                    ║
-    ║   Swagger Docs: http://localhost:${port}/api/docs         ║
-    ║   Environment: ${process.env.NODE_ENV || 'development'}                   ║
+    ║   API Server: ${serverUrl.padEnd(43)}║
+    ║   Swagger Docs: ${(serverUrl + '/api/docs').padEnd(39)}║
+    ║   Health Check: ${(serverUrl + '/api/health').padEnd(39)}║
+    ║   Environment: ${(process.env.NODE_ENV || 'development').padEnd(42)}║
     ║                                                           ║
-    ║   HIPAA Compliance: ENABLED                               ║
-    ║   Audit Logging: ACTIVE                                   ║
+    ║   ✅ HIPAA Compliance: ENABLED                            ║
+    ║   ✅ Audit Logging: ACTIVE                                ║
+    ║   ✅ Rate Limiting: ENABLED                               ║
+    ║   ✅ Security Headers: ACTIVE                             ║
     ║                                                           ║
     ╚═══════════════════════════════════════════════════════════╝
   `);

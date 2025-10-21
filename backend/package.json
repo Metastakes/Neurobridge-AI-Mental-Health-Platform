@@ -22,6 +22,7 @@
     "@nestjs/swagger": "^7.1.17",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/jwt": "^10.2.0",
+    "@nestjs/throttler": "^5.1.0",
     "@prisma/client": "^5.8.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -33,7 +34,9 @@
     "stripe": "^14.10.0",
     "@google/genai": "^1.25.0",
     "rxjs": "^7.8.1",
-    "reflect-metadata": "^0.1.13"
+    "reflect-metadata": "^0.1.13",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.2.1",
@@ -43,6 +46,7 @@
     "@types/passport-google-oauth20": "^2.0.14",
     "@types/passport-jwt": "^4.0.0",
     "@types/bcrypt": "^5.0.2",
+    "@types/compression": "^1.7.5",
     "prisma": "^5.8.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
