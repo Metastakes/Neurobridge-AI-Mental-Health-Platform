@@ -167,19 +167,29 @@ const PatientApp: React.FC<PatientAppProps> = ({ patient: legacyPatient, onLogou
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-slate-900 font-sans">
         {onboardingComplete && (
-            // Fix: Improved header layout to center title and correctly position an icon-based back button.
-            <header className="relative flex justify-center items-center p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 shadow-sm sticky top-0 z-10">
+            // Fix: Improved header layout to center title and correctly position navigation buttons.
+            <header className="relative flex justify-between items-center p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 shadow-sm sticky top-0 z-10">
                  {/* Back arrow for non-main views */}
-                 {!mainViews.includes(activeView) && (
-                     <button
-                        onClick={() => setActiveView('dashboard')}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full"
-                        aria-label="Go back to dashboard"
-                     >
-                         <ArrowLeft className="w-5 h-5" />
-                     </button>
-                 )}
+                 <div className="w-10">
+                   {!mainViews.includes(activeView) && (
+                       <button
+                          onClick={() => setActiveView('dashboard')}
+                          className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full"
+                          aria-label="Go back to dashboard"
+                       >
+                           <ArrowLeft className="w-5 h-5" />
+                       </button>
+                   )}
+                 </div>
                  <h1 className="text-xl font-bold text-gray-800 dark:text-gray-200 capitalize">{activeView}</h1>
+                 {/* Logout button - accessible from all screens */}
+                 <button
+                    onClick={onLogout}
+                    className="text-gray-600 dark:text-gray-300 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"
+                    aria-label="Logout"
+                 >
+                     <LogOut className="w-5 h-5" />
+                 </button>
             </header>
         )}
       <main className={`flex-grow overflow-y-auto ${showBottomNav ? 'pb-20' : ''}`}>
