@@ -45,6 +45,39 @@ enum GamificationEventType {
   SAFETY_CHECK
   LAB_COMPLETED
   ACHIEVEMENT_UNLOCKED
+  ONBOARDING_COMPLETE
+  SESSION_REVIEW
+  REFERRAL_SIGNUP
+  REFERRAL_FIRST_SESSION
+  SOCIAL_SHARE
+}
+
+enum ReferrerType {
+  PATIENT
+  PROVIDER
+}
+
+enum ReferralStatus {
+  PENDING        // Referral code created
+  SIGNED_UP      // Referee created account
+  ONBOARDED      // Referee completed onboarding
+  FIRST_SESSION  // Referee completed first session
+  ACTIVE         // Referee stayed 3+ months
+}
+
+enum ShareType {
+  ACHIEVEMENT
+  MILESTONE
+  REVIEW
+  PROFILE
+  REFERRAL
+}
+
+enum Platform {
+  INSTAGRAM
+  FACEBOOK
+  LINKEDIN
+  TWITTER
 }
 
 enum BillingCodeType {
@@ -128,6 +161,11 @@ model Patient {
   providerId        String?
   provider          Provider?     @relation(fields: [providerId], references: [id])
 
+  // Referral tracking
+  referralCode      String?       @unique
+  referredBy        String?       // Referral code that brought them in
+  referralSource    String?       // Where they came from (social, email, etc.)
+
   // Related records
   encounters        Encounter[]
   messages          Message[]
@@ -135,11 +173,16 @@ model Patient {
   achievements      PatientAchievement[]
   signedDocuments   SignedDocument[]
   sessionReviews    SessionReview[]
+  referralsGiven    Referral[]    @relation("ReferrerPatient")
+  referralsReceived Referral[]    @relation("RefereePatient")
+  socialShares      SocialShare[]
+  reviews           Review[]
 
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
   @@index([providerId])
+  @@index([referralCode])
 }
 
 // ============================================
@@ -161,16 +204,33 @@ model Provider {
   mentorId          String?
   mentor            Mentor?   @relation(fields: [mentorId], references: [id])
 
+  // Referral tracking
+  referralCode      String?   @unique
+  referredBy        String?   // Referral code that brought them in
+  referralBonus     Float     @default(0) // Total earned from referrals
+
+  // Marketing
+  profileUrl        String?   @unique // e.g., "dr-smith"
+  bio               String?
+  specialties       String[]
+  credentials       String[]
+
   // Related records
   patients          Patient[]
   encounters        Encounter[]
   caseNotes         CaseNote[]
   messagesReceived  Message[]
+  referralsGiven    Referral[] @relation("ReferrerProvider")
+  referralsReceived Referral[] @relation("RefereeProvider")
+  socialShares      SocialShare[]
+  reviews           Review[]
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   @@index([mentorId])
+  @@index([referralCode])
+  @@index([profileUrl])
 }
 
 // ============================================
@@ -275,7 +335,8 @@ model Encounter {
   // Clinical documentation
   caseNotes         CaseNote[]
   billingCodes      BillingCode[]
-  reviews           SessionReview[]
+  sessionReviews    SessionReview[]
+  reviews           Review[]          @relation("SessionReviews")
 
   // Duration (for billing)
   durationMinutes   Int?
@@ -514,4 +575,150 @@ model AISuggestion {
 
   @@index([patientId])
   @@index([createdAt])
+}
+
+// ============================================
+// GROWTH & REFERRALS
+// ============================================
+
+model Referral {
+  id              String    @id @default(cuid())
+
+  // Referrer (who sent the referral)
+  referrerType    ReferrerType
+  patientId       String?
+  patient         Patient?  @relation("ReferrerPatient", fields: [patientId], references: [id], onDelete: Cascade)
+  providerId      String?
+  provider        Provider? @relation("ReferrerProvider", fields: [providerId], references: [id], onDelete: Cascade)
+
+  // Referee (who was referred)
+  refereeType     ReferrerType
+  refereePatientId String?
+  refereePatient  Patient?  @relation("RefereePatient", fields: [refereePatientId], references: [id], onDelete: Cascade)
+  refereeProviderId String?
+  refereeProvider Provider? @relation("RefereeProvider", fields: [refereeProviderId], references: [id], onDelete: Cascade)
+
+  // Tracking
+  referralCode    String    @unique
+  status          ReferralStatus @default(PENDING)
+
+  // Rewards
+  rewardType      String?   // POINTS, MONEY, FREE_SESSION
+  rewardAmount    Float?
+  rewardClaimed   Boolean   @default(false)
+  rewardClaimedAt DateTime?
+
+  // Metadata
+  signupDate      DateTime?
+  firstSessionDate DateTime?
+  metadata        Json?     // Campaign tracking, UTM params, etc.
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([referralCode])
+  @@index([patientId])
+  @@index([providerId])
+  @@index([status])
+}
+
+model Review {
+  id              String    @id @default(cuid())
+
+  // Participants
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  providerId      String
+  provider        Provider  @relation(fields: [providerId], references: [id])
+  sessionId       String?
+  session         Encounter? @relation("SessionReviews", fields: [sessionId], references: [id], onDelete: SetNull)
+
+  // Review content
+  rating          Int       // 1-5 stars
+  feedback        String?
+  quickTags       String[]  // ["Helpful", "Professional", "Good Listener"]
+
+  // Review type
+  isInternal      Boolean   @default(true)
+  isPublic        Boolean   @default(false)
+  isGoogleReview  Boolean   @default(false)
+  googleReviewUrl String?
+
+  // Rewards
+  pointsAwarded   Int       @default(0)
+  bonusAwarded    Boolean   @default(false)
+
+  // Moderation
+  approved        Boolean   @default(false)
+  moderatedBy     String?
+  moderatedAt     DateTime?
+  flagged         Boolean   @default(false)
+  flagReason      String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([rating])
+  @@index([isPublic])
+  @@index([approved])
+}
+
+model SocialShare {
+  id              String    @id @default(cuid())
+
+  // User
+  patientId       String?
+  patient         Patient?  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  providerId      String?
+  provider        Provider? @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  // Share content
+  shareType       ShareType
+  platform        Platform
+
+  // Content details
+  title           String
+  description     String?
+  imageUrl        String?
+  shareUrl        String
+
+  // Tracking
+  clicks          Int       @default(0)
+  signups         Int       @default(0)
+  pointsEarned    Int       @default(0)
+
+  // Metadata
+  metadata        Json?     // Achievement details, milestone info, etc.
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([patientId])
+  @@index([providerId])
+  @@index([shareType])
+  @@index([platform])
+}
+
+model ReferralReward {
+  id              String    @id @default(cuid())
+
+  name            String    // "3 Referrals = Free Session"
+  description     String
+
+  // Conditions
+  referralCount   Int       // How many referrals needed
+  referralStatus  ReferralStatus // What status they must reach
+
+  // Reward
+  rewardType      String    // POINTS, FREE_SESSION, PREMIUM_MONTH, CASH
+  rewardAmount    Float     // Points or dollar amount
+
+  // Settings
+  isActive        Boolean   @default(true)
+  applicableTo    ReferrerType[] // [PATIENT, PROVIDER]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
