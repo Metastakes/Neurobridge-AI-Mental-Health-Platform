@@ -86,6 +86,37 @@ enum BillingCodeType {
   MODIFIER
 }
 
+// Patch 04: DSM & Mood Tracking
+enum DsmWindow {
+  SEVEN_DAYS   @map("7d")
+  THIRTY_DAYS  @map("30d")
+  NINETY_DAYS  @map("90d")
+}
+
+enum RiskSeverity {
+  LOW
+  MODERATE
+  HIGH
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+  SKIPPED
+}
+
+enum ConsentStatus {
+  REQUIRED
+  SIGNED
+  WAIVED
+}
+
+enum ProviderAction {
+  ACCEPTED
+  MODIFIED
+  REJECTED
+}
+
 // ============================================
 // USER & AUTHENTICATION
 // ============================================
@@ -177,6 +208,14 @@ model Patient {
   referralsReceived Referral[]    @relation("RefereePatient")
   socialShares      SocialShare[]
   reviews           Review[]
+
+  // Patch 04 relationships
+  moodCheckins      MoodCheckin[]
+  dsmSummaries      DsmSummary[]
+  riskAlerts        RiskAlert[]
+  pharmTasks        PharmTask[]
+  consentTasks      ConsentTask[]
+  aiAdviceCache     AiAdviceCache?
 
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -337,6 +376,9 @@ model Encounter {
   billingCodes      BillingCode[]
   sessionReviews    SessionReview[]
   reviews           Review[]          @relation("SessionReviews")
+
+  // Patch 04: AI feedback
+  aiFeedbackLogs    AiFeedbackLog[]
 
   // Duration (for billing)
   durationMinutes   Int?
@@ -721,4 +763,139 @@ model ReferralReward {
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
+// PATCH 04: DSM TRACKING & AI INTELLIGENCE
+// ============================================
+
+// 1) Mood check-ins (DSM-aligned)
+model MoodCheckin {
+  id           String   @id @default(cuid())
+  patientId    String
+  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  day          DateTime @db.Date
+
+  // DSM-aligned dimensions (-2 to +2 scale)
+  mood         Int      // 😞 -2 .. 🙂 +2
+  sleep        Int
+  energy       Int
+  focus        Int
+  appetite     Int
+  motivation   Int
+
+  createdAt    DateTime @default(now())
+
+  @@index([patientId])
+  @@index([day])
+  @@index([patientId, day])
+}
+
+// 2) AI-derived DSM summaries (precomputed for fast UI)
+model DsmSummary {
+  id              String    @id @default(cuid())
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  window          DsmWindow
+
+  // Analysis results
+  conditionCode   String?   // e.g., 'MDD','GAD','BP2'
+  confidence      Float?    // 0..1
+  matchedCriteria Json?     // DSM criteria matched counts
+
+  lastRunAt       DateTime  @default(now())
+
+  @@unique([patientId, window])
+  @@index([patientId])
+}
+
+// 3) Risk alerts fused from meds + mood
+model RiskAlert {
+  id           String        @id @default(cuid())
+  patientId    String
+  patient      Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  kind         String        // 'activation','worsening_depression','nonadherence'
+  severity     RiskSeverity
+  message      String
+  source       Json?         // references to checkins and med events
+
+  createdAt    DateTime      @default(now())
+  resolvedAt   DateTime?
+
+  @@index([patientId])
+  @@index([severity])
+  @@index([resolvedAt])
+}
+
+// 4) Pharmacology task list (patient-facing)
+model PharmTask {
+  id           String      @id @default(cuid())
+  patientId    String
+  patient      Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  medOrderId   String?     // Reference to Medication model
+  label        String      // "Get CMP", "Report tremor", etc.
+  dueOn        DateTime?   @db.Date
+  status       TaskStatus  @default(OPEN)
+  points       Int         @default(0)
+
+  createdAt    DateTime    @default(now())
+  completedAt  DateTime?
+
+  @@index([patientId])
+  @@index([status])
+  @@index([dueOn])
+}
+
+// 5) Consent and compliance task gating
+model ConsentTask {
+  id            String        @id @default(cuid())
+  patientId     String
+  patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  type          String        // 'hipaa','treatment','controlled_substance'
+  language      String        @default("en")
+  version       String
+  status        ConsentStatus @default(REQUIRED)
+  signatureHash String?
+
+  signedAt      DateTime?
+
+  @@index([patientId])
+  @@index([status])
+}
+
+// 6) AI feedback loop (provider alignment)
+model AiFeedbackLog {
+  id               String         @id @default(cuid())
+  encounterId      String
+  encounter        Encounter      @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  providerId       String
+
+  advice           Json           // AI suggestion payload
+  providerAction   ProviderAction
+  mentorComment    String?
+  alignmentScore   Float?         // 0..1
+
+  createdAt        DateTime       @default(now())
+
+  @@index([encounterId])
+  @@index([providerId])
+  @@index([createdAt])
+}
+
+// 7) Cached AI advice for fast UI (Co-Pilot panel)
+model AiAdviceCache {
+  id           String   @id @default(cuid())
+  patientId    String   @unique
+  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  advice       Json
+
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  @@index([updatedAt])
 }

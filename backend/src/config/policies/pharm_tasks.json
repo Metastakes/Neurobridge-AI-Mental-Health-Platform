@@ -1,0 +1,326 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pharmacology Task Policy",
+  "description": "Automated patient task generation based on medication orders. Ensures safety monitoring and lab compliance.",
+  "version": "1.0.0",
+
+  "medications": {
+    "lithium": {
+      "generic": "lithium carbonate",
+      "class": "mood_stabilizer",
+      "labs": [
+        { "code": "BMP", "name": "Basic Metabolic Panel", "due_days": 7, "points": 50 },
+        { "code": "TSH", "name": "Thyroid Function", "due_days": 30, "points": 50 },
+        { "code": "LITHIUM_LEVEL", "name": "Lithium Level", "due_days": 7, "points": 50 }
+      ],
+      "watch_symptoms": [
+        { "symptom": "tremor", "severity": "moderate", "action": "report_immediately" },
+        { "symptom": "polyuria", "severity": "moderate", "action": "report_within_24h" },
+        { "symptom": "polydipsia", "severity": "moderate", "action": "report_within_24h" },
+        { "symptom": "nausea", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "confusion", "severity": "high", "action": "emergency" },
+        { "symptom": "muscle_weakness", "severity": "high", "action": "emergency" }
+      ],
+      "education": [
+        "Stay well hydrated (8+ glasses water daily)",
+        "Report tremors or confusion immediately",
+        "Regular blood tests are required for safety",
+        "Avoid NSAIDs (ibuprofen, naproxen) without provider approval"
+      ]
+    },
+
+    "quetiapine": {
+      "generic": "quetiapine",
+      "class": "atypical_antipsychotic",
+      "labs": [
+        { "code": "A1C", "name": "Hemoglobin A1c", "due_days": 90, "points": 50 },
+        { "code": "LIPIDS", "name": "Lipid Panel", "due_days": 90, "points": 50 },
+        { "code": "WEIGHT", "name": "Weight Check", "due_days": 30, "points": 25 }
+      ],
+      "watch_symptoms": [
+        { "symptom": "sedation", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "weight_gain", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "dizziness", "severity": "moderate", "action": "report_within_24h" },
+        { "symptom": "high_blood_sugar_symptoms", "severity": "high", "action": "emergency" }
+      ],
+      "education": [
+        "Take at bedtime to minimize daytime sedation",
+        "Monitor weight monthly",
+        "Report increased thirst or urination",
+        "May cause drowsiness - use caution driving initially"
+      ]
+    },
+
+    "fluoxetine": {
+      "generic": "fluoxetine",
+      "class": "SSRI",
+      "labs": [],
+      "watch_symptoms": [
+        { "symptom": "activation", "severity": "moderate", "action": "report_within_24h" },
+        { "symptom": "gi_upset", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "insomnia", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "sexual_dysfunction", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "suicidal_thoughts", "severity": "high", "action": "emergency" }
+      ],
+      "education": [
+        "May take 4-6 weeks for full effect",
+        "Report increased anxiety or agitation",
+        "Take with food if stomach upset occurs",
+        "Do not stop abruptly - taper with provider guidance"
+      ]
+    },
+
+    "sertraline": {
+      "generic": "sertraline",
+      "class": "SSRI",
+      "labs": [],
+      "watch_symptoms": [
+        { "symptom": "nausea", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "diarrhea", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "insomnia", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "activation", "severity": "moderate", "action": "report_within_24h" },
+        { "symptom": "suicidal_thoughts", "severity": "high", "action": "emergency" }
+      ],
+      "education": [
+        "May take 4-6 weeks for full effect",
+        "GI side effects usually improve after 1-2 weeks",
+        "Take with food to reduce nausea",
+        "Report worsening depression or suicidal thoughts"
+      ]
+    },
+
+    "bupropion": {
+      "generic": "bupropion",
+      "class": "NDRI",
+      "labs": [],
+      "watch_symptoms": [
+        { "symptom": "insomnia", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "anxiety", "severity": "moderate", "action": "report_within_24h" },
+        { "symptom": "seizure", "severity": "high", "action": "emergency" },
+        { "symptom": "tremor", "severity": "low", "action": "report_at_next_visit" }
+      ],
+      "education": [
+        "Do not take within 4 hours of bedtime",
+        "Lower seizure risk if taking as prescribed",
+        "May help with smoking cessation",
+        "Report new or worsening anxiety"
+      ],
+      "contraindications": [
+        "seizure_disorder",
+        "bulimia",
+        "anorexia",
+        "abrupt_alcohol_withdrawal"
+      ]
+    },
+
+    "escitalopram": {
+      "generic": "escitalopram",
+      "class": "SSRI",
+      "labs": [],
+      "watch_symptoms": [
+        { "symptom": "nausea", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "fatigue", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "insomnia", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "activation", "severity": "moderate", "action": "report_within_24h" }
+      ],
+      "education": [
+        "Usually well-tolerated SSRI",
+        "May take 4-6 weeks for full benefit",
+        "Can be taken with or without food",
+        "Report mood changes to your provider"
+      ]
+    },
+
+    "venlafaxine": {
+      "generic": "venlafaxine",
+      "class": "SNRI",
+      "labs": [
+        { "code": "BP", "name": "Blood Pressure", "due_days": 30, "points": 25 }
+      ],
+      "watch_symptoms": [
+        { "symptom": "nausea", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "elevated_bp", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "sweating", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "discontinuation_syndrome", "severity": "moderate", "action": "report_within_24h" }
+      ],
+      "education": [
+        "Take with food to reduce nausea",
+        "Monitor blood pressure regularly",
+        "Do NOT skip doses - may cause withdrawal symptoms",
+        "Taper slowly when discontinuing"
+      ]
+    },
+
+    "aripiprazole": {
+      "generic": "aripiprazole",
+      "class": "atypical_antipsychotic",
+      "labs": [
+        { "code": "A1C", "name": "Hemoglobin A1c", "due_days": 90, "points": 50 },
+        { "code": "LIPIDS", "name": "Lipid Panel", "due_days": 90, "points": 50 }
+      ],
+      "watch_symptoms": [
+        { "symptom": "restlessness", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "akathisia", "severity": "moderate", "action": "report_within_24h" },
+        { "symptom": "weight_gain", "severity": "low", "action": "report_at_next_visit" }
+      ],
+      "education": [
+        "Lower weight gain risk than other antipsychotics",
+        "Report restlessness or inability to sit still",
+        "Monitor blood sugar and cholesterol",
+        "May cause initial activation or anxiety"
+      ]
+    },
+
+    "lamotrigine": {
+      "generic": "lamotrigine",
+      "class": "mood_stabilizer",
+      "labs": [],
+      "watch_symptoms": [
+        { "symptom": "rash", "severity": "high", "action": "emergency" },
+        { "symptom": "fever", "severity": "high", "action": "emergency" },
+        { "symptom": "mouth_sores", "severity": "high", "action": "emergency" },
+        { "symptom": "dizziness", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "headache", "severity": "low", "action": "report_at_next_visit" }
+      ],
+      "education": [
+        "CRITICAL: Report any rash immediately and stop medication",
+        "Slow titration reduces rash risk",
+        "Take exactly as prescribed",
+        "Do not increase dose faster than prescribed"
+      ],
+      "black_box_warning": "Stevens-Johnson Syndrome risk - report any rash immediately"
+    },
+
+    "valproate": {
+      "generic": "divalproex sodium",
+      "class": "mood_stabilizer",
+      "labs": [
+        { "code": "CBC", "name": "Complete Blood Count", "due_days": 30, "points": 50 },
+        { "code": "LFT", "name": "Liver Function Tests", "due_days": 30, "points": 50 },
+        { "code": "VALPROATE_LEVEL", "name": "Valproate Level", "due_days": 30, "points": 50 }
+      ],
+      "watch_symptoms": [
+        { "symptom": "nausea", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "tremor", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "hair_loss", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "weight_gain", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "abdominal_pain", "severity": "high", "action": "emergency" }
+      ],
+      "education": [
+        "Regular blood tests required",
+        "Take with food to reduce stomach upset",
+        "Report abdominal pain or yellowing of skin/eyes",
+        "NOT safe in pregnancy - use reliable contraception"
+      ],
+      "pregnancy_category": "X",
+      "pregnancy_flags": ["teratogenic", "neural_tube_defects"]
+    },
+
+    "paroxetine": {
+      "generic": "paroxetine",
+      "class": "SSRI",
+      "labs": [],
+      "watch_symptoms": [
+        { "symptom": "nausea", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "sedation", "severity": "low", "action": "report_at_next_visit" },
+        { "symptom": "weight_gain", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "discontinuation_syndrome", "severity": "high", "action": "report_within_24h" }
+      ],
+      "education": [
+        "Short half-life - do NOT skip doses",
+        "Taper very slowly when discontinuing",
+        "May cause more weight gain than other SSRIs",
+        "Take at same time daily"
+      ],
+      "pregnancy_category": "D",
+      "pregnancy_flags": ["cardiac_defects_risk"]
+    },
+
+    "clonazepam": {
+      "generic": "clonazepam",
+      "class": "benzodiazepine",
+      "controlled_substance": "Schedule IV",
+      "labs": [],
+      "watch_symptoms": [
+        { "symptom": "sedation", "severity": "moderate", "action": "report_within_24h" },
+        { "symptom": "memory_problems", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "tolerance", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "dependence", "severity": "high", "action": "report_within_24h" }
+      ],
+      "education": [
+        "For short-term use only",
+        "Do NOT combine with alcohol",
+        "May cause drowsiness - use caution driving",
+        "Do NOT stop abruptly - seizure risk",
+        "Taper slowly with provider guidance"
+      ],
+      "black_box_warning": "Risk of dependence, abuse, and respiratory depression with opioids",
+      "requires_pdmp_check": true
+    },
+
+    "methylphenidate": {
+      "generic": "methylphenidate",
+      "class": "stimulant",
+      "controlled_substance": "Schedule II",
+      "labs": [
+        { "code": "BP", "name": "Blood Pressure", "due_days": 30, "points": 25 },
+        { "code": "HEART_RATE", "name": "Heart Rate", "due_days": 30, "points": 25 }
+      ],
+      "watch_symptoms": [
+        { "symptom": "insomnia", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "appetite_loss", "severity": "moderate", "action": "report_within_7d" },
+        { "symptom": "elevated_bp", "severity": "high", "action": "report_within_24h" },
+        { "symptom": "chest_pain", "severity": "high", "action": "emergency" },
+        { "symptom": "palpitations", "severity": "moderate", "action": "report_within_24h" }
+      ],
+      "education": [
+        "Take early in day to minimize insomnia",
+        "Monitor blood pressure and heart rate",
+        "May decrease appetite - ensure adequate nutrition",
+        "Report chest pain or palpitations immediately"
+      ],
+      "requires_pdmp_check": true,
+      "contraindications": ["heart_disease", "uncontrolled_hypertension", "glaucoma"]
+    }
+  },
+
+  "pregnancy_flags": {
+    "X": ["valproate"],
+    "D": ["paroxetine"],
+    "high_risk": ["valproate", "paroxetine", "lithium"]
+  },
+
+  "controlled_substances": {
+    "schedule_ii": ["methylphenidate", "amphetamine", "dextroamphetamine"],
+    "schedule_iv": ["clonazepam", "lorazepam", "alprazolam", "zolpidem"]
+  },
+
+  "task_generation_rules": {
+    "lab_task": {
+      "create_on": "med_order_placed",
+      "label_template": "Get {lab_name} blood test",
+      "due_calculation": "order_date + {due_days} days",
+      "points": 50
+    },
+    "symptom_watch": {
+      "create_on": "med_order_placed",
+      "label_template": "Watch for {symptom} - report {action}",
+      "due_calculation": "order_date + 7 days",
+      "points": 25
+    },
+    "education_review": {
+      "create_on": "med_order_placed",
+      "label_template": "Review {medication} safety information",
+      "due_calculation": "order_date + 1 day",
+      "points": 10
+    }
+  },
+
+  "disclaimers": [
+    "This is clinical decision support - not a replacement for clinical judgment",
+    "Provider must review all tasks before patient assignment",
+    "Lab requirements may vary based on patient history",
+    "Always check drug interactions and contraindications",
+    "Follow institutional protocols and guidelines"
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DSM-5 Pattern Recognition Policy",
+  "description": "Configurable thresholds for AI-driven DSM-5 pattern detection. Not diagnostic - for clinical decision support only.",
+  "version": "1.0.0",
+
+  "windows": ["7d", "30d", "90d"],
+
+  "thresholds": {
+    "MDD": {
+      "name": "Major Depressive Disorder",
+      "icd10": "F32.9",
+      "min_days": 14,
+      "symptoms_required": 5,
+      "core_symptoms": ["mood", "interest"],
+      "additional_symptoms": ["sleep", "energy", "focus", "appetite", "motivation"],
+      "criteria": {
+        "mood": { "threshold": -1, "days": 14 },
+        "interest": { "threshold": -1, "days": 14 },
+        "sleep": { "threshold": -1, "days": 10 },
+        "energy": { "threshold": -1, "days": 10 },
+        "focus": { "threshold": -1, "days": 10 },
+        "appetite": { "threshold": -1, "days": 10 },
+        "motivation": { "threshold": -1, "days": 10 }
+      },
+      "note": "Requires at least ONE core symptom (mood OR interest) plus 4+ additional symptoms"
+    },
+
+    "GAD": {
+      "name": "Generalized Anxiety Disorder",
+      "icd10": "F41.1",
+      "min_days": 180,
+      "symptoms_required": 3,
+      "core_symptoms": ["worry"],
+      "additional_symptoms": ["energy", "focus", "sleep", "motivation"],
+      "criteria": {
+        "worry": { "threshold": -1, "days": 180 },
+        "energy": { "threshold": -1, "days": 90 },
+        "focus": { "threshold": -1, "days": 90 },
+        "sleep": { "threshold": -1, "days": 90 },
+        "motivation": { "threshold": -1, "days": 60 }
+      },
+      "note": "Excessive worry most days for 6+ months with 3+ associated symptoms"
+    },
+
+    "BP2": {
+      "name": "Bipolar II Disorder",
+      "icd10": "F31.81",
+      "hypomania_days": 4,
+      "depression_days": 14,
+      "energy_peak": 2,
+      "mood_peak": 2,
+      "criteria": {
+        "hypomania": {
+          "energy": { "threshold": 2, "days": 4 },
+          "mood": { "threshold": 1, "days": 4 },
+          "focus": { "threshold": 1, "days": 4 }
+        },
+        "depression": {
+          "energy": { "threshold": -1, "days": 14 },
+          "mood": { "threshold": -1, "days": 14 }
+        }
+      },
+      "note": "Requires BOTH hypomanic AND depressive episodes; hypomanic episode = 4+ consecutive days of elevated mood/energy"
+    },
+
+    "ADHD_INATTENTIVE": {
+      "name": "ADHD, Predominantly Inattentive",
+      "icd10": "F90.0",
+      "min_days": 180,
+      "symptoms_required": 6,
+      "core_symptoms": ["focus"],
+      "additional_symptoms": ["motivation", "energy"],
+      "criteria": {
+        "focus": { "threshold": -1, "days": 180 },
+        "motivation": { "threshold": -1, "days": 90 },
+        "energy": { "threshold": 0, "days": 60 }
+      },
+      "note": "Persistent inattention for 6+ months; energy may be normal or low"
+    },
+
+    "INSOMNIA": {
+      "name": "Chronic Insomnia Disorder",
+      "icd10": "G47.00",
+      "min_days": 90,
+      "symptoms_required": 2,
+      "core_symptoms": ["sleep"],
+      "additional_symptoms": ["energy", "focus", "mood"],
+      "criteria": {
+        "sleep": { "threshold": -1, "days": 90 },
+        "energy": { "threshold": -1, "days": 60 },
+        "focus": { "threshold": -1, "days": 60 }
+      },
+      "note": "Sleep difficulties 3+ nights/week for 3+ months with daytime impairment"
+    }
+  },
+
+  "confidence_rules": {
+    "high": {
+      "min_confidence": 0.75,
+      "criteria_met": 0.8,
+      "data_completeness": 0.9
+    },
+    "moderate": {
+      "min_confidence": 0.5,
+      "criteria_met": 0.6,
+      "data_completeness": 0.7
+    },
+    "low": {
+      "min_confidence": 0.3,
+      "criteria_met": 0.4,
+      "data_completeness": 0.5
+    }
+  },
+
+  "disclaimers": [
+    "This tool is for clinical decision support only",
+    "Not a replacement for clinical judgment",
+    "Provider must evaluate and confirm diagnosis",
+    "Patterns detected do not constitute a diagnosis",
+    "Consider differential diagnoses and comorbidities"
+  ]
+}
