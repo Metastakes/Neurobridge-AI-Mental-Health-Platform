@@ -20,6 +20,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { DsmAnalysisWorker } from '../../workers/dsm-analysis.worker';
 
 /**
  * Patch 04: Mood Check-ins Controller
@@ -30,7 +31,10 @@ import { UserRole } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class MoodController {
-  constructor(private readonly moodService: MoodService) {}
+  constructor(
+    private readonly moodService: MoodService,
+    private readonly dsmWorker: DsmAnalysisWorker,
+  ) {}
 
   /**
    * POST /mood/checkins/:patientId
@@ -125,7 +129,7 @@ export class MoodController {
   /**
    * POST /mood/compute/:patientId (internal)
    * Trigger DSM analysis (called by worker/cron)
-   * Provider/Admin only for manual triggers
+   * Admin only for manual triggers
    */
   @Post('compute/:patientId')
   @Roles(UserRole.ADMIN)
@@ -136,13 +140,18 @@ export class MoodController {
   })
   @ApiResponse({
     status: 202,
-    description: 'Analysis queued',
+    description: 'Analysis triggered',
   })
   async computeDsmSummary(@Param('patientId') patientId: string) {
-    // This will be implemented when we build the DSM worker
+    // Trigger analysis asynchronously
+    this.dsmWorker.analyzePatientManual(patientId).catch(err => {
+      // Log error but don't fail the request
+      console.error(`DSM analysis failed for patient ${patientId}:`, err);
+    });
+
     return {
       success: true,
-      message: 'DSM analysis queued',
+      message: 'DSM analysis triggered',
       patientId,
     };
   }

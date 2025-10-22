@@ -3,6 +3,7 @@ import { MoodController } from './mood.controller';
 import { MoodService } from './mood.service';
 import { PrismaModule } from '../../common/prisma/prisma.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { WorkersModule } from '../../workers/workers.module';
 
 /**
  * Patch 04: Mood Check-ins Module
@@ -12,6 +13,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
   imports: [
     PrismaModule,
     EventEmitterModule.forRoot(),
+    WorkersModule,
   ],
   controllers: [MoodController],
   providers: [MoodService],

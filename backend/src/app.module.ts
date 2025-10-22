@@ -17,6 +17,7 @@ import { ReferralsModule } from './modules/referrals/referrals.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { SocialSharesModule } from './modules/social-shares/social-shares.module';
 import { MoodModule } from './modules/mood/mood.module';
+import { WorkersModule } from './workers/workers.module';
 import { AuditModule } from './common/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
@@ -53,6 +54,7 @@ import { validate } from './config/env.validation';
     ReviewsModule,
     SocialSharesModule,
     MoodModule,
+    WorkersModule,
   ],
   providers: [
     {
