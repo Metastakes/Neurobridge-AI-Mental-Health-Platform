@@ -293,3 +293,51 @@ export const billingApi = {
     return data;
   },
 };
+
+// ============================================
+// MENTORS
+// ============================================
+
+export const mentorsApi = {
+  getAll: async () => {
+    const { data } = await apiClient.get('/mentors');
+    return data;
+  },
+
+  getById: async (id: string) => {
+    const { data } = await apiClient.get(`/mentors/${id}`);
+    return data;
+  },
+
+  getMentees: async (mentorId: string) => {
+    const { data } = await apiClient.get(`/mentors/${mentorId}/mentees`);
+    return data;
+  },
+
+  getSummary: async (mentorId: string) => {
+    const { data } = await apiClient.get(`/mentors/${mentorId}/summary`);
+    return data;
+  },
+
+  create: async (mentor: any) => {
+    const { data } = await apiClient.post('/mentors', mentor);
+    return data;
+  },
+
+  update: async (id: string, updates: any) => {
+    const { data } = await apiClient.put(`/mentors/${id}`, updates);
+    return data;
+  },
+
+  assignProvider: async (mentorId: string, providerId: string) => {
+    const { data } = await apiClient.post(`/mentors/${mentorId}/assign-provider`, {
+      providerId,
+    });
+    return data;
+  },
+
+  unassignProvider: async (mentorId: string, providerId: string) => {
+    const { data } = await apiClient.delete(`/mentors/${mentorId}/providers/${providerId}`);
+    return data;
+  },
+};

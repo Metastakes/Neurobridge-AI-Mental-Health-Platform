@@ -8,6 +8,7 @@ import { PatientsModule } from './modules/patients/patients.module';
 import { MedicationsModule } from './modules/medications/medications.module';
 import { DiagnosesModule } from './modules/diagnoses/diagnoses.module';
 import { EncountersModule } from './modules/encounters/encounters.module';
+import { MentorsModule } from './modules/mentors/mentors.module';
 import { AiModule } from './modules/ai/ai.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
@@ -39,6 +40,7 @@ import { validate } from './config/env.validation';
     MedicationsModule,
     DiagnosesModule,
     EncountersModule,
+    MentorsModule,
     AiModule,
     SchedulingModule,
     GamificationModule,
