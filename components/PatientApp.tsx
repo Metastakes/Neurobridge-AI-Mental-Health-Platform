@@ -1,5 +1,11 @@
 // components/PatientApp.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+// Real API integration
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { usePatient } from '../hooks/usePatient.ts';
+import { useGamificationSummary } from '../hooks/useGamification.ts';
+import { LoadingSpinner } from './common/LoadingSpinner.tsx';
+import { ErrorDisplay } from './common/ErrorDisplay.tsx';
 // Fix: Add file extensions to imports to resolve module errors.
 import { Patient, PatientView, ChatMessage, User } from '../types.ts';
 import PatientDashboard from './patient/PatientDashboard.tsx';
@@ -17,50 +23,113 @@ import useInactivityLogout from '../hooks/useInactivityLogout.ts';
 import { Home, User as UserIcon, LogOut, Award, Gift, BarChart2, MessageSquare, Calendar, ArrowLeft } from './Icons.tsx';
 
 interface PatientAppProps {
-  patient: Patient;
+  patient: any; // Legacy prop - will be replaced by API data
   onLogout: () => void;
-  onUpdatePatientDetails: (patient: Patient) => void;
+  onUpdatePatientDetails?: (patient: Patient) => void; // Legacy - optional now
   chats: Record<string, ChatMessage[]>;
-  onSendMessage: (chatId: string, text: string, senderId: number) => void;
+  onSendMessage: (chatId: string, text: string, senderId: string) => void;
   allUsers: User[];
 }
 
-const PatientApp: React.FC<PatientAppProps> = ({ patient, onLogout, onUpdatePatientDetails, chats, onSendMessage, allUsers }) => {
-  const [activeView, setActiveView] = useState<PatientView>(patient.details.onboardingComplete ? 'dashboard' : 'onboarding');
-  const [points, setPoints] = useState(1250);
-  const [reviews, setReviews] = useState(3);
-  
+const PatientApp: React.FC<PatientAppProps> = ({ patient: legacyPatient, onLogout, onUpdatePatientDetails, chats, onSendMessage, allUsers }) => {
+  const { user } = useAuth();
+
+  // Get patient ID from auth context or legacy prop
+  const patientId = user?.patient?.id || legacyPatient?.id;
+
+  // Fetch real patient data from API
+  const { data: apiPatient, isLoading: patientLoading, error: patientError, refetch: refetchPatient } = usePatient(patientId);
+
+  // Fetch gamification data (points, achievements)
+  const { data: gamificationData, isLoading: gamificationLoading } = useGamificationSummary(patientId);
+
+  // Use API data if available, fallback to legacy prop
+  const patient = apiPatient || legacyPatient;
+  const points = gamificationData?.totalPoints || 0;
+  const reviews = gamificationData?.pendingReviews || 0;
+
+  // Check if onboarding is complete
+  const onboardingComplete = patient?.onboardingComplete !== false;
+
+  const [activeView, setActiveView] = useState<PatientView>(onboardingComplete ? 'dashboard' : 'onboarding');
+
   useInactivityLogout(onLogout);
 
-  const patientChatId = `chat_${patient.id}_${patient.providerId}`;
+  // Update active view when patient data loads
+  useEffect(() => {
+    if (patient && !onboardingComplete && activeView !== 'onboarding') {
+      setActiveView('onboarding');
+    }
+  }, [patient, onboardingComplete]);
+
+  const patientChatId = patient ? `chat_${patient.id}_${patient.providerId || 'provider'}` : '';
   const chatHistory = chats[patientChatId] || [];
 
   const handleSendMessageToProvider = (text: string) => {
-    onSendMessage(patientChatId, text, patient.id);
+    if (patient) {
+      onSendMessage(patientChatId, text, patient.id.toString());
+    }
   };
 
   // Fix: Update handleCompleteOnboarding to not expect any arguments to match the onComplete prop of PatientOnboarding.
-  const handleCompleteOnboarding = () => {
+  const handleCompleteOnboarding = async () => {
+    // TODO: Call API to mark onboarding complete
+    // For now, use legacy method if available
+    if (onUpdatePatientDetails && legacyPatient) {
       const updatedPatient: Patient = {
-          ...patient,
-          details: {
-              ...patient.details,
-              onboardingComplete: true,
-          }
+        ...legacyPatient,
+        details: {
+          ...legacyPatient.details,
+          onboardingComplete: true,
+        }
       };
       onUpdatePatientDetails(updatedPatient);
-      setActiveView('dashboard');
+    }
+    setActiveView('dashboard');
+    await refetchPatient();
+  }
+
+  // Show loading state while fetching initial data
+  if (patientLoading && !patient) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-slate-900">
+        <LoadingSpinner size="large" text="Loading your dashboard..." />
+      </div>
+    );
+  }
+
+  // Show error state if fetch failed
+  if (patientError && !patient) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-slate-900 p-6">
+        <ErrorDisplay error={patientError} onRetry={() => refetchPatient()} />
+      </div>
+    );
+  }
+
+  // No patient data available
+  if (!patient) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-slate-900">
+        <div className="text-center text-gray-500">
+          <p>No patient data found</p>
+          <button onClick={onLogout} className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg">
+            Logout
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const renderView = () => {
-    if (!patient.details.onboardingComplete) {
+    if (!onboardingComplete) {
         // Fix: Removed `currentDetails` prop as it is not defined in PatientOnboardingProps.
         return <PatientOnboarding onComplete={handleCompleteOnboarding} />;
     }
 
     switch (activeView) {
       case 'dashboard':
-        return <PatientDashboard setActiveView={setActiveView} points={points} reviews={reviews} />;
+        return <PatientDashboard patient={patient} setActiveView={setActiveView} points={points} reviews={reviews} />;
       case 'profile':
         return <PatientProfile patient={patient} onUpdatePatient={onUpdatePatientDetails} onLogout={onLogout} />;
       case 'messages':
@@ -68,15 +137,15 @@ const PatientApp: React.FC<PatientAppProps> = ({ patient, onLogout, onUpdatePati
       case 'schedule':
         return <PatientSchedule patient={patient} allUsers={allUsers} />;
       case 'review':
-        return <PatientReview setActiveView={setActiveView} setPoints={setPoints} setReviews={setReviews} />;
+        return <PatientReview patientId={patientId} setActiveView={setActiveView} />;
       case 'achievements':
-        return <PatientAchievements />;
+        return <PatientAchievements patientId={patientId} />;
       case 'rewards':
-        return <PatientRewards points={points} setPoints={setPoints} />;
+        return <PatientRewards patientId={patientId} points={points} />;
       case 'progress':
-        return <PatientProgress />;
+        return <PatientProgress patientId={patientId} />;
       default:
-        return <PatientDashboard setActiveView={setActiveView} points={points} reviews={reviews} />;
+        return <PatientDashboard patient={patient} setActiveView={setActiveView} points={points} reviews={reviews} />;
     }
   };
 
@@ -93,17 +162,17 @@ const PatientApp: React.FC<PatientAppProps> = ({ patient, onLogout, onUpdatePati
   
   // Fix: Align mainViews with the views present in the bottom navigation bar for consistent UI.
   const mainViews: PatientView[] = ['dashboard', 'schedule', 'messages', 'progress', 'profile'];
-  const showBottomNav = patient.details.onboardingComplete && mainViews.includes(activeView);
+  const showBottomNav = onboardingComplete && mainViews.includes(activeView);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-slate-900 font-sans">
-        {patient.details.onboardingComplete && (
+        {onboardingComplete && (
             // Fix: Improved header layout to center title and correctly position an icon-based back button.
             <header className="relative flex justify-center items-center p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 shadow-sm sticky top-0 z-10">
                  {/* Back arrow for non-main views */}
                  {!mainViews.includes(activeView) && (
-                     <button 
-                        onClick={() => setActiveView('dashboard')} 
+                     <button
+                        onClick={() => setActiveView('dashboard')}
                         className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full"
                         aria-label="Go back to dashboard"
                      >

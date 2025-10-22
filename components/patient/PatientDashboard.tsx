@@ -5,19 +5,35 @@ import { PatientView } from '../../types.ts';
 import { Zap, Star, Award, MessageSquare, Plus, Calendar } from '../Icons.tsx';
 
 interface PatientDashboardProps {
+  patient: any; // Can be legacy or API patient data
   setActiveView: (view: PatientView) => void;
   points: number;
   reviews: number;
 }
 
-const PatientDashboard: React.FC<PatientDashboardProps> = ({ setActiveView, points, reviews }) => {
+const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, setActiveView, points, reviews }) => {
+  // Get patient name from either legacy or API format
+  const getPatientFirstName = () => {
+    if (patient.name) {
+      // Legacy format: "Alex Smith"
+      return patient.name.split(' ')[0];
+    }
+    if (patient.user) {
+      // API format: patient.user.firstName
+      return patient.user.firstName;
+    }
+    return 'there'; // Fallback
+  };
+
+  const firstName = getPatientFirstName();
+
   return (
     <div className="p-4 max-w-md mx-auto space-y-6">
       {/* Welcome & Points */}
       <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl shadow-lg p-6 text-white">
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold">Hello, Alex</h2>
+            <h2 className="text-2xl font-bold">Hello, {firstName}</h2>
             <p className="opacity-80">Ready to take on the day?</p>
           </div>
           <div className="text-right">
@@ -50,19 +66,25 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({ setActiveView, poin
         </button>
       </div>
 
-      {/* Session Review Prompt */}
-      <div className="bg-yellow-50 dark:bg-yellow-900/50 border-l-4 border-yellow-400 dark:border-yellow-600 p-4 rounded-r-lg flex justify-between items-center">
-        <div>
-          <p className="font-bold text-yellow-800 dark:text-yellow-200">Review Your Last Session</p>
-          <p className="text-sm text-yellow-700 dark:text-yellow-300">Earn 50 points for your feedback!</p>
+      {/* Session Review Prompt - Only show if there are pending reviews */}
+      {reviews > 0 && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/50 border-l-4 border-yellow-400 dark:border-yellow-600 p-4 rounded-r-lg flex justify-between items-center">
+          <div>
+            <p className="font-bold text-yellow-800 dark:text-yellow-200">
+              Review Your Last Session{reviews > 1 ? 's' : ''}
+            </p>
+            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+              Earn 50 points for your feedback!
+            </p>
+          </div>
+          <button
+            onClick={() => setActiveView('review')}
+            className="bg-yellow-400 text-white font-bold px-4 py-2 rounded-lg hover:bg-yellow-500 transition-all"
+          >
+            Review
+          </button>
         </div>
-        <button
-          onClick={() => setActiveView('review')}
-          className="bg-yellow-400 text-white font-bold px-4 py-2 rounded-lg hover:bg-yellow-500 transition-all"
-        >
-          Review
-        </button>
-      </div>
+      )}
       
       {/* Profile actions */}
        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-5 border border-gray-200 dark:border-slate-700">

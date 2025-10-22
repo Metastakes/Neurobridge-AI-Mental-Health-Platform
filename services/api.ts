@@ -240,6 +240,25 @@ export const gamificationApi = {
     return data;
   },
 
+  getAchievements: async (patientId: string) => {
+    const { data } = await apiClient.get(`/gamification/achievements/${patientId}`);
+    return data;
+  },
+
+  getAchievementsCatalog: async () => {
+    const { data } = await apiClient.get('/gamification/achievements');
+    return data;
+  },
+
+  trackEvent: async (event: {
+    patientId: string;
+    eventType: string;
+    metadata?: any;
+  }) => {
+    const { data } = await apiClient.post('/gamification/track-event', event);
+    return data;
+  },
+
   recordEvent: async (event: {
     patientId: string;
     eventType: string;
