@@ -1,7 +1,13 @@
 // components/provider/ProviderPatientDetail.tsx
 import React, { useState } from 'react';
-// Fix: Add file extensions to imports to resolve module errors.
-import { Patient, Provider, ChatMessage } from '../../types.ts';
+// Real API integration
+import { usePatient, useAddMedication, useRemoveMedication } from '../../hooks/usePatient';
+import { useMedicationSuggestions } from '../../hooks/useAI';
+import { LoadingSpinner } from '../common/LoadingSpinner';
+import { ErrorDisplay } from '../common/ErrorDisplay';
+import { toast } from '../common/Toast';
+// Legacy imports for existing UI components
+import { ChatMessage } from '../../types.ts';
 import { diagnosticTools } from '../../diagnosticToolsData.ts';
 import ProviderMessages from './ProviderMessages.tsx';
 import CaseNotesHistory from './CaseNotesHistory.tsx';
@@ -11,21 +17,27 @@ import { Zap } from '../Icons.tsx';
 import SecureSessionModal from '../SecureSessionModal.tsx';
 
 interface ProviderPatientDetailProps {
-    patient: Patient;
-    provider: Provider;
-    onSendMessage: (chatId: string, text: string, senderId: number) => void;
+    patientId: string;
+    providerId: string;
+    onSendMessage: (chatId: string, text: string, senderId: string) => void;
     chats: Record<string, ChatMessage[]>;
 }
 
-const ProviderPatientDetail: React.FC<ProviderPatientDetailProps> = ({ patient, provider, onSendMessage, chats }) => {
+const ProviderPatientDetail: React.FC<ProviderPatientDetailProps> = ({ patientId, providerId, onSendMessage, chats }) => {
+    // Fetch real patient data from API
+    const { data: patient, isLoading, error, refetch } = usePatient(patientId);
+    const addMedication = useAddMedication();
+    const removeMedication = useRemoveMedication();
+    const getMedSuggestions = useMedicationSuggestions();
+
     const [isToolModalOpen, setIsToolModalOpen] = useState(false);
     const [isSOAPModalOpen, setIsSOAPModalOpen] = useState(false);
     const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
     const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
 
-    const patientProviderChatId = `chat_${patient.id}_${provider.id}`;
+    const patientProviderChatId = `chat_${patientId}_${providerId}`;
     const chatHistory = chats[patientProviderChatId] || [];
-    
+
     const selectedTool = diagnosticTools.find(t => t.id === selectedToolId) || null;
 
     const openTool = (id: string) => {
@@ -33,35 +45,68 @@ const ProviderPatientDetail: React.FC<ProviderPatientDetailProps> = ({ patient, 
         setIsToolModalOpen(true);
     };
 
+    // Loading state
+    if (isLoading) {
+        return <LoadingSpinner size="large" text="Loading patient data..." />;
+    }
+
+    // Error state
+    if (error) {
+        return <ErrorDisplay error={error} onRetry={() => refetch()} />;
+    }
+
+    // No patient found
+    if (!patient) {
+        return <div className="p-6 text-center text-gray-500">Patient not found</div>;
+    }
+
+    // Format patient name from user data
+    const patientName = `${patient.user.firstName} ${patient.user.lastName}`;
+
+    // Get primary diagnosis
+    const primaryDiagnosis = patient.diagnoses?.find(d => d.isPrimary)?.description ||
+                            patient.diagnoses?.[0]?.description ||
+                            'No diagnosis recorded';
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-            <DiagnosticToolModal 
+            <DiagnosticToolModal
                 isOpen={isToolModalOpen}
                 onClose={() => setIsToolModalOpen(false)}
                 tool={selectedTool}
-                patientName={patient.name}
+                patientName={patientName}
             />
-             <AIClinicalSOAPNote 
+             <AIClinicalSOAPNote
                 isOpen={isSOAPModalOpen}
                 onClose={() => setIsSOAPModalOpen(false)}
                 patient={patient}
             />
-            <SecureSessionModal 
+            <SecureSessionModal
                 isOpen={isSessionModalOpen}
                 onClose={() => setIsSessionModalOpen(false)}
-                patientName={patient.name}
+                patientName={patientName}
             />
 
             <div className="lg:col-span-2 space-y-6">
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">{patient.name}</h2>
-                    <p className="text-gray-600 dark:text-gray-400">{patient.details.diagnosis}</p>
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">{patientName}</h2>
+                    <p className="text-gray-600 dark:text-gray-400">{primaryDiagnosis}</p>
+                    <div className="mt-4 flex items-center gap-2">
+                        <span className="rounded bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+                            {patient.alertStatus}
+                        </span>
+                        {patient.height && patient.weight && (
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                                {patient.height}" / {patient.weight} lbs
+                            </span>
+                        )}
+                    </div>
                     <div className="mt-4 flex flex-wrap gap-2">
                          <button onClick={() => setIsSessionModalOpen(true)} className="bg-green-500 text-white px-3 py-1.5 text-sm font-semibold rounded-lg hover:bg-green-600">Start Secure Session</button>
                          <button onClick={() => setIsSOAPModalOpen(true)} className="bg-yellow-400 text-white px-3 py-1.5 text-sm font-semibold rounded-lg hover:bg-yellow-500 flex items-center gap-1"><Zap className="w-4 h-4"/> Gen SOAP Note</button>
                     </div>
                 </div>
-                <CaseNotesHistory patientId={patient.id} onAddNote={() => setIsSOAPModalOpen(true)} />
+                <CaseNotesHistory patientId={patientId} onAddNote={() => setIsSOAPModalOpen(true)} />
 
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Diagnostic Tools</h3>
@@ -76,11 +121,11 @@ const ProviderPatientDetail: React.FC<ProviderPatientDetailProps> = ({ patient, 
             </div>
 
             <div className="lg:col-span-1 h-full">
-                <ProviderMessages 
-                    patientName={patient.name}
+                <ProviderMessages
+                    patientName={patientName}
                     chatHistory={chatHistory}
-                    currentUser={provider}
-                    onSendMessage={(text) => onSendMessage(patientProviderChatId, text, provider.id)}
+                    currentUser={{ id: providerId, name: 'Provider' }} // TODO: fetch provider data
+                    onSendMessage={(text) => onSendMessage(patientProviderChatId, text, providerId)}
                 />
             </div>
         </div>

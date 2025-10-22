@@ -1,39 +1,41 @@
-// App.tsx
-import React, { useState, useMemo } from 'react';
-// Fix: Add file extensions to imports to resolve module errors.
+/**
+ * NeuroBridge AI Mental Health Platform
+ * Main Application with Real API Integration
+ */
+
+import { useState } from 'react';
+import { QueryProvider } from './QueryProvider.tsx';
+import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
+import { ThemeProvider } from './ThemeContext.tsx';
+import { GoogleApiProvider } from './GoogleApiContext.tsx';
 import LoginScreen from './components/LoginScreen.tsx';
 import PatientApp from './components/PatientApp.tsx';
 import ProviderDashboard from './components/ProviderDashboard.tsx';
 import MentorDashboard from './components/MentorDashboard.tsx';
 import HIPAADisclaimerModal from './components/HIPAADisclaimerModal.tsx';
-import { users as initialUsers, initialChatHistories } from './userData.ts';
-import { User, Patient, Provider, Mentor, ChatMessage } from './types.ts';
-import { GoogleApiProvider } from './GoogleApiContext.tsx';
-import { ThemeProvider } from './ThemeContext.tsx';
+import { ToastContainer } from './components/common/Toast.tsx';
+import { LoadingOverlay } from './components/common/LoadingSpinner.tsx';
+import { ChatMessage } from './types.ts';
 
-function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>(initialUsers);
-  const [chats, setChats] = useState<Record<string, ChatMessage[]>>(initialChatHistories);
+function AppContent() {
+  const { user, login, logout, isLoading, isAuthenticated } = useAuth();
   const [showHIPAADisclaimer, setShowHIPAADisclaimer] = useState(false);
+  const [chats, setChats] = useState<Record<string, ChatMessage[]>>({});
 
-  const allPatients = useMemo(() => allUsers.filter(u => u.role === 'patient') as Patient[], [allUsers]);
-  const allProviders = useMemo(() => allUsers.filter(u => u.role === 'provider') as Provider[], [allUsers]);
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      await login(email, password);
 
-
-  const handleLogin = (email: string, pass: string) => {
-    // This is a mock login. In a real app, you'd verify the password.
-    const user = allUsers.find(u => u.email === email && u.password === pass);
-    if (user) {
-      setCurrentUser(user);
-      if (user.role === 'provider' || user.role === 'mentor') {
+      // Show HIPAA disclaimer for providers/mentors
+      const userData = JSON.parse(localStorage.getItem('authUser') || '{}');
+      if (userData.role === 'PROVIDER' || userData.role === 'MENTOR') {
         const hasAcknowledged = sessionStorage.getItem('hipaa_acknowledged');
         if (!hasAcknowledged) {
-            setShowHIPAADisclaimer(true);
+          setShowHIPAADisclaimer(true);
         }
       }
-    } else {
-      alert("Invalid credentials");
+    } catch (error) {
+      alert('Invalid credentials. Please try again.');
     }
   };
 
@@ -42,23 +44,11 @@ function App() {
     setShowHIPAADisclaimer(false);
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-  };
-
-   const handleUpdatePatientDetails = (updatedPatient: Patient) => {
-    setAllUsers(prevUsers => {
-        return prevUsers.map(user => 
-            user.id === updatedPatient.id ? updatedPatient : user
-        );
-    });
-  };
-
-  const handleSendMessage = (chatId: string, text: string, senderId: number) => {
+  const handleSendMessage = (chatId: string, text: string, senderId: string) => {
     const newMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
       text,
-      senderId,
+      senderId: parseInt(senderId), // Convert to number for legacy compatibility
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     setChats(prev => ({
@@ -66,65 +56,99 @@ function App() {
       [chatId]: [...(prev[chatId] || []), newMessage],
     }));
   };
-  
-  const renderApp = () => {
-      if (!currentUser) {
-        return <LoginScreen onLogin={handleLogin} />;
-      }
-      
-      const currentPatient = currentUser.role === 'patient' 
-        ? allPatients.find(p => p.id === currentUser.id)
-        // Fix: Corrected a typo in the ternary operator from '-' to ':'.
-        : undefined;
-    
-    
-      switch (currentUser.role) {
-        case 'patient':
-          return currentPatient ? (
-              <PatientApp 
-                patient={currentPatient} 
-                onLogout={handleLogout} 
-                onUpdatePatientDetails={handleUpdatePatientDetails}
-                chats={chats}
-                onSendMessage={handleSendMessage}
-                allUsers={allUsers}
-              />
-          ) : <div>Loading patient data...</div>;
-        case 'provider':
-          return <ProviderDashboard 
-                    provider={currentUser as Provider} 
-                    patients={allPatients.filter(p => (currentUser as Provider).patientIds.includes(p.id))}
-                    onLogout={handleLogout}
-                    chats={chats}
-                    onSendMessage={handleSendMessage}
-                 />;
-        case 'mentor':
-            return <MentorDashboard 
-                    mentor={currentUser as Mentor} 
-                    mentees={allProviders.filter(u => (currentUser as Mentor).menteeIds.includes(u.id))}
-                    onLogout={handleLogout}
-                    chats={chats}
-                    onSendMessage={handleSendMessage}
-                   />;
-        default:
-          return <div>Unknown user role.</div>;
-      }
+
+  if (isLoading) {
+    return <LoadingOverlay text="Loading..." />;
   }
 
+  if (!isAuthenticated || !user) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  // Render based on user role
+  const renderApp = () => {
+    // Convert role to match legacy types (uppercase to lowercase)
+    const legacyRole = user.role.toLowerCase();
+
+    switch (user.role) {
+      case 'PATIENT':
+        return user.patient ? (
+          <PatientApp
+            patient={user.patient as any}
+            onLogout={logout}
+            onUpdatePatientDetails={() => {}}
+            chats={chats}
+            onSendMessage={handleSendMessage}
+            allUsers={[]}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-screen">
+            <LoadingOverlay text="Loading patient data..." />
+          </div>
+        );
+
+      case 'PROVIDER':
+        return user.provider ? (
+          <ProviderDashboard
+            provider={user.provider as any}
+            patients={[]} // Patients will be fetched inside ProviderDashboard
+            onLogout={logout}
+            chats={chats}
+            onSendMessage={handleSendMessage}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-screen">
+            <LoadingOverlay text="Loading provider data..." />
+          </div>
+        );
+
+      case 'MENTOR':
+        return user.mentor ? (
+          <MentorDashboard
+            mentor={user.mentor as any}
+            mentees={[]} // Mentees will be fetched inside MentorDashboard
+            onLogout={logout}
+            chats={chats}
+            onSendMessage={handleSendMessage}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-screen">
+            <LoadingOverlay text="Loading mentor data..." />
+          </div>
+        );
+
+      default:
+        return <div className="flex items-center justify-center h-screen text-gray-500">Unknown user role.</div>;
+    }
+  };
+
   return (
-      <ThemeProvider>
-        <GoogleApiProvider>
-          {currentUser && (currentUser.role === 'provider' || currentUser.role === 'mentor') && (
-              <HIPAADisclaimerModal 
-                isOpen={showHIPAADisclaimer}
-                onAcknowledge={handleAcknowledgeHIPAA}
-                userRole={currentUser.role}
-              />
-          )}
-          {renderApp()}
-        </GoogleApiProvider>
-      </ThemeProvider>
-  )
+    <>
+      {(user.role === 'PROVIDER' || user.role === 'MENTOR') && (
+        <HIPAADisclaimerModal
+          isOpen={showHIPAADisclaimer}
+          onAcknowledge={handleAcknowledgeHIPAA}
+          userRole={user.role.toLowerCase() as 'provider' | 'mentor'}
+        />
+      )}
+      {renderApp()}
+      <ToastContainer />
+    </>
+  );
+}
+
+function App() {
+  return (
+    <QueryProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <GoogleApiProvider>
+            <AppContent />
+          </GoogleApiProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </QueryProvider>
+  );
 }
 
 export default App;

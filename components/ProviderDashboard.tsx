@@ -1,5 +1,7 @@
 // components/ProviderDashboard.tsx
 import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { patientsApi } from '../services/api.ts';
 // Fix: Add file extensions to imports to resolve module errors.
 import { Provider, Patient, ChatMessage, Mentor } from '../types.ts';
 import { users } from '../userData.ts';
@@ -10,22 +12,46 @@ import ProviderSchedule from './provider/ProviderSchedule.tsx';
 import { LogOut, Users, MessageSquare, Calendar } from './Icons.tsx';
 import ThemeToggle from './ThemeToggle.tsx';
 import useInactivityLogout from '../hooks/useInactivityLogout.ts';
+import { LoadingSpinner } from './common/LoadingSpinner.tsx';
+import { ErrorDisplay } from './common/ErrorDisplay.tsx';
 
 interface ProviderDashboardProps {
   provider: Provider;
-  patients: Patient[];
+  patients: Patient[]; // Legacy - will be replaced by API data
   onLogout: () => void;
   chats: Record<string, ChatMessage[]>;
-  onSendMessage: (chatId: string, text: string, senderId: number) => void;
+  onSendMessage: (chatId: string, text: string, senderId: string) => void;
 }
 
-const ProviderDashboard: React.FC<ProviderDashboardProps> = ({ provider, patients, onLogout, chats, onSendMessage }) => {
-  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(provider.patientIds[0] || null);
+const ProviderDashboard: React.FC<ProviderDashboardProps> = ({ provider, patients: legacyPatients, onLogout, chats, onSendMessage }) => {
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'caseload' | 'mentorChat' | 'schedule'>('caseload');
 
   useInactivityLogout(onLogout);
 
-  const selectedPatient = patients.find(p => p.id === selectedPatientId) || null;
+  // Fetch provider's patients from API
+  const { data: apiPatients, isLoading, error, refetch } = useQuery({
+    queryKey: ['provider-patients', provider.id],
+    queryFn: async () => {
+      // TODO: Update API to support filtering by providerId
+      // For now, fetch all patients and filter client-side
+      const allPatients = await patientsApi.getAll();
+      return allPatients.filter((p: any) => p.providerId === provider.id);
+    },
+    enabled: !!provider.id,
+  });
+
+  // Use API patients if available, fallback to legacy
+  const patients = apiPatients || legacyPatients || [];
+
+  // Set initial selected patient
+  React.useEffect(() => {
+    if (patients.length > 0 && !selectedPatientId) {
+      setSelectedPatientId(patients[0].id);
+    }
+  }, [patients, selectedPatientId]);
+
+  const selectedPatient = patients.find((p: any) => p.id === selectedPatientId) || null;
   const mentor = useMemo(() => {
       if (!provider.mentorId) return null;
       return users.find(u => u.id === provider.mentorId) as Mentor;
