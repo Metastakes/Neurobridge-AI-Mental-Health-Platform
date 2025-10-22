@@ -61,27 +61,47 @@ const ProviderDashboard: React.FC<ProviderDashboardProps> = ({ provider, patient
   const mentorChatHistory = chats[providerMentorChatId] || [];
   
   const renderMainContent = () => {
+    // Show loading state while fetching patients
+    if (isLoading && activeTab === 'caseload') {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <LoadingSpinner size="large" text="Loading patients..." />
+        </div>
+      );
+    }
+
+    // Show error state if fetch failed
+    if (error && activeTab === 'caseload') {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <ErrorDisplay error={error} onRetry={() => refetch()} />
+        </div>
+      );
+    }
+
     switch (activeTab) {
         case 'caseload':
-            return selectedPatient ? (
-                <ProviderPatientDetail 
-                  patient={selectedPatient} 
-                  provider={provider}
+            return selectedPatientId ? (
+                <ProviderPatientDetail
+                  patientId={selectedPatientId}
+                  providerId={provider.id.toString()}
                   chats={chats}
                   onSendMessage={onSendMessage}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500 dark:text-gray-400">Select a patient to view details.</p>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {patients.length === 0 ? 'No patients assigned' : 'Select a patient to view details.'}
+                    </p>
                 </div>
               );
         case 'mentorChat':
              return mentor && (
-                 <ProviderMentorChat 
+                 <ProviderMentorChat
                     mentorName={mentor.name}
                     chatHistory={mentorChatHistory}
                     currentUser={provider}
-                    onSendMessage={(text) => onSendMessage(providerMentorChatId, text, provider.id)}
+                    onSendMessage={(text) => onSendMessage(providerMentorChatId, text, provider.id.toString())}
                  />
               );
         case 'schedule':
