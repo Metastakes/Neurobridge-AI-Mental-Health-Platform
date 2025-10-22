@@ -13,6 +13,9 @@ import { AiModule } from './modules/ai/ai.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { ReferralsModule } from './modules/referrals/referrals.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { SocialSharesModule } from './modules/social-shares/social-shares.module';
 import { AuditModule } from './common/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
@@ -45,6 +48,9 @@ import { validate } from './config/env.validation';
     SchedulingModule,
     GamificationModule,
     BillingModule,
+    ReferralsModule,
+    ReviewsModule,
+    SocialSharesModule,
   ],
   providers: [
     {
