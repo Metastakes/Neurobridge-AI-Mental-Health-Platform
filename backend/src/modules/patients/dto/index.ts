@@ -132,3 +132,24 @@ export class UpdatePatientDto {
   @IsOptional()
   providerId?: string;
 }
+
+export class SessionReviewDto {
+  @ApiProperty({ description: 'Session rating (1-5)' })
+  @IsNumber()
+  rating: number;
+
+  @ApiPropertyOptional({ description: 'Review text feedback' })
+  @IsString()
+  @IsOptional()
+  feedback?: string;
+
+  @ApiPropertyOptional({ description: 'Session ID being reviewed' })
+  @IsString()
+  @IsOptional()
+  sessionId?: string;
+
+  @ApiPropertyOptional({ description: 'Would recommend (yes/no)' })
+  @IsBoolean()
+  @IsOptional()
+  wouldRecommend?: boolean;
+}

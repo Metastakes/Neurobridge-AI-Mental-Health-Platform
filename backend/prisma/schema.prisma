@@ -134,6 +134,7 @@ model Patient {
   gamificationEvents GamificationEvent[]
   achievements      PatientAchievement[]
   signedDocuments   SignedDocument[]
+  sessionReviews    SessionReview[]
 
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -274,9 +275,13 @@ model Encounter {
   // Clinical documentation
   caseNotes         CaseNote[]
   billingCodes      BillingCode[]
+  reviews           SessionReview[]
 
   // Duration (for billing)
   durationMinutes   Int?
+
+  // Review status
+  reviewSubmitted   Boolean            @default(false)
 
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -308,6 +313,25 @@ model CaseNote {
 
   @@index([encounterId])
   @@index([providerId])
+}
+
+model SessionReview {
+  id              String    @id @default(cuid())
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  sessionId       String?
+  session         Encounter? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  rating          Int       // 1-5 stars
+  feedback        String?   // Optional text feedback
+  wouldRecommend  Boolean?  // Would recommend provider
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([patientId])
+  @@index([sessionId])
 }
 
 // ============================================

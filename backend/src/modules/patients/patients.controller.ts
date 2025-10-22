@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Param,
   Body,
   Query,
@@ -10,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PatientsService } from './patients.service';
-import { CreatePatientDto, UpdatePatientDto } from './dto';
+import { CreatePatientDto, UpdatePatientDto, SessionReviewDto } from './dto';
 import { AuditInterceptor } from '../../common/audit/audit.interceptor';
 
 @ApiTags('patients')
@@ -57,5 +58,26 @@ export class PatientsController {
   @ApiOperation({ summary: 'Update patient' })
   async update(@Param('id') id: string, @Body() data: UpdatePatientDto) {
     return this.patientsService.update(id, data);
+  }
+
+  @Patch(':id/onboarding')
+  @ApiOperation({ summary: 'Mark patient onboarding as complete' })
+  async completeOnboarding(@Param('id') id: string) {
+    return this.patientsService.completeOnboarding(id);
+  }
+
+  @Get(':id/summary')
+  @ApiOperation({ summary: 'Get patient summary with stats' })
+  async getSummary(@Param('id') id: string) {
+    return this.patientsService.getSummary(id);
+  }
+
+  @Post(':id/session-review')
+  @ApiOperation({ summary: 'Submit session review and earn points' })
+  async submitSessionReview(
+    @Param('id') id: string,
+    @Body() review: SessionReviewDto,
+  ) {
+    return this.patientsService.submitSessionReview(id, review);
   }
 }

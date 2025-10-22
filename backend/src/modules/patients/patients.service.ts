@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { CreatePatientDto, UpdatePatientDto } from './dto';
+import { CreatePatientDto, UpdatePatientDto, SessionReviewDto } from './dto';
 
 @Injectable()
 export class PatientsService {
@@ -215,6 +215,136 @@ export class PatientsService {
       totalPoints: totalPoints._sum.points || 0,
       achievements,
       recentEvents,
+    };
+  }
+
+  /**
+   * Mark patient onboarding as complete
+   */
+  async completeOnboarding(id: string) {
+    const patient = await this.prisma.patient.update({
+      where: { id },
+      data: { onboardingComplete: true },
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Award points for completing onboarding
+    await this.prisma.gamificationEvent.create({
+      data: {
+        patientId: id,
+        eventType: 'ONBOARDING_COMPLETE',
+        points: 100,
+        metadata: { timestamp: new Date().toISOString() },
+      },
+    });
+
+    return patient;
+  }
+
+  /**
+   * Get patient summary with stats
+   */
+  async getSummary(id: string) {
+    const patient = await this.findOne(id);
+
+    const [totalSessions, nextAppointment, pendingReviews] = await Promise.all([
+      this.prisma.encounter.count({
+        where: {
+          patientId: id,
+          status: 'COMPLETED',
+        },
+      }),
+      this.prisma.encounter.findFirst({
+        where: {
+          patientId: id,
+          status: 'SCHEDULED',
+          scheduledAt: {
+            gte: new Date(),
+          },
+        },
+        orderBy: {
+          scheduledAt: 'asc',
+        },
+        include: {
+          provider: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.encounter.count({
+        where: {
+          patientId: id,
+          status: 'COMPLETED',
+          reviewSubmitted: false,
+        },
+      }),
+    ]);
+
+    return {
+      ...patient,
+      summary: {
+        totalSessions,
+        nextAppointment,
+        pendingReviews,
+      },
+    };
+  }
+
+  /**
+   * Submit session review and earn points
+   */
+  async submitSessionReview(id: string, review: SessionReviewDto) {
+    // Record the review in the database
+    const reviewRecord = await this.prisma.sessionReview.create({
+      data: {
+        patientId: id,
+        rating: review.rating,
+        feedback: review.feedback,
+        sessionId: review.sessionId,
+        wouldRecommend: review.wouldRecommend,
+      },
+    });
+
+    // Mark session as reviewed if sessionId provided
+    if (review.sessionId) {
+      await this.prisma.encounter.update({
+        where: { id: review.sessionId },
+        data: { reviewSubmitted: true },
+      });
+    }
+
+    // Award points for submitting review
+    await this.prisma.gamificationEvent.create({
+      data: {
+        patientId: id,
+        eventType: 'SESSION_REVIEW',
+        points: 50,
+        metadata: {
+          rating: review.rating,
+          sessionId: review.sessionId,
+        },
+      },
+    });
+
+    return {
+      success: true,
+      review: reviewRecord,
+      pointsEarned: 50,
     };
   }
 }
