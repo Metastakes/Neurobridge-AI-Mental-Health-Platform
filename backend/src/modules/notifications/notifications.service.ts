@@ -10,6 +10,7 @@ import { SmsService } from '../communications/sms.service';
 import { EmailService } from '../communications/email.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { NotificationPreferencesService } from './notification-preferences.service';
+import { NotificationHistoryService } from './notification-history.service';
 
 export interface CrisisAlertEvent {
   providerId: string;
@@ -51,6 +52,7 @@ export class NotificationsService {
     private readonly emailService: EmailService,
     private readonly prisma: PrismaService,
     private readonly preferencesService: NotificationPreferencesService,
+    private readonly historyService: NotificationHistoryService,
   ) {}
 
   /**
@@ -183,6 +185,20 @@ export class NotificationsService {
           event.emergencyContact,
         );
 
+        // Log notification
+        await this.historyService.logNotification({
+          providerId: event.providerId,
+          notificationType: 'crisis',
+          channel: 'sms',
+          recipient: smsCheck.number,
+          patientId: event.patientId,
+          patientName: event.patientName,
+          alertData: { indicators: event.indicators, emergencyContact: event.emergencyContact },
+          status: smsResult.success ? 'sent' : 'failed',
+          statusMessage: smsResult.error,
+          externalId: smsResult.messageId,
+        });
+
         if (smsResult.success) {
           this.logger.log(`Crisis SMS sent to provider ${event.providerId}: ${smsResult.messageId}`);
         } else {
@@ -209,6 +225,20 @@ export class NotificationsService {
           event.indicators,
           event.emergencyContact,
         );
+
+        // Log notification
+        await this.historyService.logNotification({
+          providerId: event.providerId,
+          notificationType: 'crisis',
+          channel: 'email',
+          recipient: emailCheck.email,
+          patientId: event.patientId,
+          patientName: event.patientName,
+          alertData: { indicators: event.indicators, emergencyContact: event.emergencyContact },
+          status: emailResult.success ? 'sent' : 'failed',
+          statusMessage: emailResult.error,
+          externalId: emailResult.messageId,
+        });
 
         if (emailResult.success) {
           this.logger.log(`Crisis email sent to provider ${event.providerId}: ${emailResult.messageId}`);

@@ -255,15 +255,16 @@ model Provider {
   credentials       String[]
 
   // Related records
-  patients                Patient[]
-  encounters              Encounter[]
-  caseNotes               CaseNote[]
-  messagesReceived        Message[]
-  referralsGiven          Referral[] @relation("ReferrerProvider")
-  referralsReceived       Referral[] @relation("RefereeProvider")
-  socialShares            SocialShare[]
-  reviews                 Review[]
-  notificationPreferences NotificationPreferences?
+  patients                  Patient[]
+  encounters                Encounter[]
+  caseNotes                 CaseNote[]
+  messagesReceived          Message[]
+  referralsGiven            Referral[] @relation("ReferrerProvider")
+  referralsReceived         Referral[] @relation("RefereeProvider")
+  socialShares              SocialShare[]
+  reviews                   Review[]
+  notificationPreferences   NotificationPreferences?
+  notificationDeliveryLogs  NotificationDeliveryLog[]
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -970,4 +971,41 @@ model NotificationPreferences {
   updatedAt DateTime @updatedAt
 
   @@index([providerId])
+}
+
+// Notification delivery log (tracks all sent notifications)
+model NotificationDeliveryLog {
+  id         String   @id @default(cuid())
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  // Notification details
+  notificationType String // 'crisis', 'safety_check', 'high_risk', 'medium_risk', 'low_risk'
+  channel          String // 'websocket', 'sms', 'email'
+  recipient        String // Phone number or email address
+
+  // Patient context
+  patientId   String
+  patientName String
+  alertData   Json? // Additional alert details
+
+  // Delivery status
+  status        String   @default("pending") // 'pending', 'sent', 'delivered', 'failed'
+  statusMessage String?  // Error message if failed
+  externalId    String?  // Twilio message SID or email message ID
+
+  // Timing
+  sentAt      DateTime? // When notification was sent
+  deliveredAt DateTime? // When delivery was confirmed (SMS only)
+  failedAt    DateTime? // When delivery failed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+  @@index([notificationType])
+  @@index([channel])
+  @@index([status])
+  @@index([createdAt])
+  @@index([providerId, createdAt])
 }
