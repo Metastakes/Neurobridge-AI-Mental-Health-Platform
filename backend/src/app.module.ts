@@ -19,6 +19,7 @@ import { SocialSharesModule } from './modules/social-shares/social-shares.module
 import { MoodModule } from './modules/mood/mood.module';
 import { PharmacologyModule } from './modules/pharmacology/pharmacology.module';
 import { RiskModule } from './modules/risk/risk.module';
+import { CrisisModule } from './modules/crisis/crisis.module';
 import { WorkersModule } from './workers/workers.module';
 import { AuditModule } from './common/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
@@ -58,6 +59,7 @@ import { validate } from './config/env.validation';
     MoodModule,
     PharmacologyModule,
     RiskModule,
+    CrisisModule,
     WorkersModule,
   ],
   providers: [
