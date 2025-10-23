@@ -2,6 +2,7 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PatientsModule } from './modules/patients/patients.module';
@@ -21,6 +22,7 @@ import { PharmacologyModule } from './modules/pharmacology/pharmacology.module';
 import { RiskModule } from './modules/risk/risk.module';
 import { CrisisModule } from './modules/crisis/crisis.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { WorkersModule } from './workers/workers.module';
 import { AuditModule } from './common/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
@@ -41,6 +43,7 @@ import { validate } from './config/env.validation';
         limit: 100, // 100 requests per minute
       },
     ]),
+    EventEmitterModule.forRoot(),
     PrismaModule,
     AuditModule,
     HealthModule,
@@ -62,6 +65,7 @@ import { validate } from './config/env.validation';
     RiskModule,
     CrisisModule,
     AnalyticsModule,
+    NotificationsModule,
     WorkersModule,
   ],
   providers: [

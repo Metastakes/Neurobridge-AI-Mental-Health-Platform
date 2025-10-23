@@ -294,6 +294,36 @@ export class CrisisDetectionWorker {
 
     this.logger.warn(`🚨 Crisis detected for patient ${patientId}: ${highestSeverity}`);
 
+    // Get patient with provider info and emergency contact
+    const patient = await this.prisma.patient.findUnique({
+      where: { id: patientId },
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        provider: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!patient) {
+      this.logger.error(`Patient ${patientId} not found during crisis handling`);
+      return;
+    }
+
     // Create crisis alert in database
     await this.prisma.riskAlert.create({
       data: {
@@ -319,13 +349,21 @@ export class CrisisDetectionWorker {
       data: { alertStatus: 'EMERGENCY' },
     });
 
-    // Emit event for real-time notifications
-    this.eventEmitter.emit('crisis.detected', {
-      patientId,
-      severity: highestSeverity,
-      indicators,
-      timestamp: new Date(),
-    });
+    // Emit event for real-time notifications (WebSocket broadcast)
+    if (patient.provider) {
+      this.eventEmitter.emit('crisis.detected', {
+        providerId: patient.provider.id,
+        patientId,
+        patientName: `${patient.user.firstName} ${patient.user.lastName}`,
+        indicators: indicators.map(i => i.message),
+        severity: highestSeverity === 'CRITICAL' ? 'critical' : 'high',
+        emergencyContact: patient.emergencyContact ? {
+          name: patient.emergencyContact.name,
+          phone: patient.emergencyContact.phone,
+          relationship: patient.emergencyContact.relationship,
+        } : undefined,
+      });
+    }
 
     // Log for monitoring/alerting systems
     this.logger.error(
