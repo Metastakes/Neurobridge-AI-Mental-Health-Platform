@@ -1,7 +1,9 @@
 // googleApi.ts
-// Fix: Add declarations for gapi and google to provide types for the globally available Google API objects.
-declare const gapi: any;
-// Fix: Add namespace declaration for the google object from Google Identity Services to resolve namespace errors.
+/// <reference types="gapi" />
+/// <reference types="gapi.client.calendar-v3" />
+
+// Type declarations for Google Identity Services (GIS)
+// Note: GIS is separate from gapi and doesn't have official TypeScript types yet
 declare namespace google {
     namespace accounts {
         namespace oauth2 {

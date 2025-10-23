@@ -1,6 +1,5 @@
 // GoogleApiContext.tsx
-// Fix: Add declaration for gapi to provide a type for the globally available Google API object.
-declare const gapi: any;
+/// <reference types="gapi" />
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initGapiClient, initGisClient, handleSignIn, handleSignOut } from './googleApi.ts';

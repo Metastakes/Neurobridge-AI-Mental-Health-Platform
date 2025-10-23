@@ -5,9 +5,10 @@ import { Zap } from './Icons.tsx';
 
 interface LoginScreenProps {
   onLogin: (email: string, pass: string) => void;
+  error?: string | null;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, error }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
@@ -54,6 +55,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                     placeholder="********"
                 />
             </div>
+            {error && (
+                <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                    {error}
+                </div>
+            )}
             <button type="submit" className="w-full bg-indigo-500 text-white font-bold py-3 rounded-lg hover:bg-indigo-600">
                 Login
             </button>
