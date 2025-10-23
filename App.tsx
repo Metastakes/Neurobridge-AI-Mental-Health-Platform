@@ -1,6 +1,7 @@
 // App.tsx
 import React, { useState, useMemo } from 'react';
 // Fix: Add file extensions to imports to resolve module errors.
+import ErrorBoundary from './components/ErrorBoundary.tsx';
 import LoginScreen from './components/LoginScreen.tsx';
 import PatientApp from './components/PatientApp.tsx';
 import ProviderDashboard from './components/ProviderDashboard.tsx';
@@ -136,18 +137,22 @@ function App() {
   }
 
   return (
-      <ThemeProvider>
-        <GoogleApiProvider>
-          {currentUser && (currentUser.role === 'provider' || currentUser.role === 'mentor') && (
-              <HIPAADisclaimerModal 
-                isOpen={showHIPAADisclaimer}
-                onAcknowledge={handleAcknowledgeHIPAA}
-                userRole={currentUser.role}
-              />
-          )}
-          {renderApp()}
-        </GoogleApiProvider>
-      </ThemeProvider>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <ErrorBoundary>
+            <GoogleApiProvider>
+              {currentUser && (currentUser.role === 'provider' || currentUser.role === 'mentor') && (
+                  <HIPAADisclaimerModal
+                    isOpen={showHIPAADisclaimer}
+                    onAcknowledge={handleAcknowledgeHIPAA}
+                    userRole={currentUser.role}
+                  />
+              )}
+              {renderApp()}
+            </GoogleApiProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
+      </ErrorBoundary>
   )
 }
 

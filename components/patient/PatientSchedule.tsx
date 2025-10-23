@@ -7,6 +7,7 @@ import { Patient, User as AppUser, CalendarEvent } from '../../types.ts';
 import RequestAppointmentModal from './RequestAppointmentModal.tsx';
 import { useGoogleApi } from '../../GoogleApiContext.tsx';
 import { listUpcomingEvents, deleteCalendarEvent } from '../../googleApi.ts';
+import { AppointmentSkeleton } from '../Skeleton.tsx';
 
 interface PatientScheduleProps {
     patient: Patient;
@@ -167,7 +168,13 @@ const PatientSchedule: React.FC<PatientScheduleProps> = ({ patient, allUsers }) 
 
                     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-5 border border-gray-200 dark:border-slate-700 space-y-4">
                         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Upcoming Sessions</h3>
-                        {loading ? <p className="text-center text-gray-500 dark:text-gray-400">Loading appointments...</p> : events.length > 0 ? events.map(event => {
+                        {loading ? (
+                            <div className="space-y-3">
+                                <AppointmentSkeleton />
+                                <AppointmentSkeleton />
+                                <AppointmentSkeleton />
+                            </div>
+                        ) : events.length > 0 ? events.map(event => {
                              const apptDateObj = new Date(event.start.dateTime || event.start.date!);
                              const apptTime = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).format(apptDateObj);
 
