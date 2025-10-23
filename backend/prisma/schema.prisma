@@ -858,6 +858,40 @@ model PharmTask {
   @@index([dueOn])
 }
 
+// 4b) Crisis intervention documentation
+model CrisisIntervention {
+  id           String      @id @default(cuid())
+  crisisId     String      // Reference to crisis alert (stored in RiskAlert or separate system)
+  providerId   String
+  patientId    String
+
+  // Actions taken during intervention
+  actionsTaken String[]    // Array of action keys (called_patient, contacted_911, etc.)
+  notes        String      // Free-text clinical notes
+
+  // Emergency response
+  contactedEmergencyServices Boolean @default(false)
+  contactedEmergencyContact  Boolean @default(false)
+
+  // Follow-up
+  scheduledFollowUp Boolean @default(false)
+  followUpDate      DateTime?
+
+  // Resolution status
+  resolution       String // 'resolved', 'ongoing', 'escalated'
+  resolutionNotes  String?
+
+  // Timestamps
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([crisisId])
+  @@index([providerId])
+  @@index([patientId])
+  @@index([resolution])
+  @@index([createdAt])
+}
+
 // 5) Consent and compliance task gating
 model ConsentTask {
   id            String        @id @default(cuid())

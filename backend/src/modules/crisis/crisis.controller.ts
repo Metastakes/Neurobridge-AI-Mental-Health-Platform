@@ -3,20 +3,27 @@
  * Endpoints for accessing crisis resources and provider crisis management
  */
 
-import { Controller, Get, Post, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  CrisisInterventionService,
+  CreateInterventionDto,
+} from './crisis-intervention.service';
 
 @ApiTags('Crisis Management')
 @Controller('crisis')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class CrisisController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly interventionService: CrisisInterventionService,
+  ) {}
 
   /**
    * GET /crisis/resources
@@ -260,5 +267,67 @@ export class CrisisController {
         text: 'Text "HELLO" to 741741',
       },
     };
+  }
+
+  /**
+   * GET /crisis/alerts/:id
+   * Get detailed crisis alert information for provider intervention
+   */
+  @Get('alerts/:id')
+  @Roles(UserRole.PROVIDER, UserRole.MENTOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get detailed crisis alert for intervention' })
+  async getCrisisAlertDetails(@Param('id') id: string, @Request() req) {
+    const providerId = req.user.providerId || req.user.id;
+    return this.interventionService.getCrisisDetails(id, providerId);
+  }
+
+  /**
+   * POST /crisis/interventions
+   * Document a crisis intervention
+   */
+  @Post('interventions')
+  @Roles(UserRole.PROVIDER, UserRole.MENTOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Document crisis intervention' })
+  async createIntervention(
+    @Body() dto: CreateInterventionDto,
+    @Request() req,
+  ) {
+    const providerId = req.user.providerId || req.user.id;
+    return this.interventionService.createIntervention(dto, providerId);
+  }
+
+  /**
+   * GET /crisis/interventions/patient/:patientId
+   * Get intervention history for a patient
+   */
+  @Get('interventions/patient/:patientId')
+  @Roles(UserRole.PROVIDER, UserRole.MENTOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get patient intervention history' })
+  async getPatientInterventions(@Param('patientId') patientId: string) {
+    return this.interventionService.getPatientInterventions(patientId);
+  }
+
+  /**
+   * GET /crisis/interventions/provider
+   * Get intervention history for current provider
+   */
+  @Get('interventions/provider')
+  @Roles(UserRole.PROVIDER, UserRole.MENTOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get provider intervention history' })
+  async getProviderInterventions(@Request() req) {
+    const providerId = req.user.providerId || req.user.id;
+    return this.interventionService.getProviderInterventions(providerId);
+  }
+
+  /**
+   * GET /crisis/interventions/stats
+   * Get intervention statistics for current provider
+   */
+  @Get('interventions/stats')
+  @Roles(UserRole.PROVIDER, UserRole.MENTOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get provider intervention statistics' })
+  async getInterventionStats(@Request() req) {
+    const providerId = req.user.providerId || req.user.id;
+    return this.interventionService.getProviderInterventionStats(providerId);
   }
 }
