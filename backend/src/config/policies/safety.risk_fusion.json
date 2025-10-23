@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Risk Fusion Safety Policy",
+  "description": "Policy-driven thresholds for correlating medication changes with mood patterns",
+  "version": "1.0.0",
+
+  "windows": {
+    "checkins_days": 30,
+    "med_changes_days": 14
+  },
+
+  "activation": {
+    "description": "Activation syndrome detection (SSRI/SNRI induced anxiety/agitation)",
+    "drug_classes": ["SSRI", "SNRI"],
+    "window_start": 3,
+    "window_end": 10,
+    "signature": {
+      "energy": "up",
+      "sleep": "down",
+      "mood": "down"
+    },
+    "threshold": 0.6,
+    "note": "Detects paradoxical worsening within 3-10 days of SSRI/SNRI start"
+  },
+
+  "worsening": {
+    "description": "Depression worsening despite treatment",
+    "mood_drop_threshold": 0.2,
+    "window_days": 14,
+    "note": "Triggers alert if mood drops by 0.2+ points after medication change"
+  },
+
+  "nonadherence": {
+    "description": "Patient disengagement detection",
+    "no_checkins_days": 7,
+    "open_tasks": true,
+    "note": "Flags patients who haven't checked in for 7+ days AND have open tasks"
+  },
+
+  "disclaimers": [
+    "These are decision support thresholds, not diagnostic criteria",
+    "Provider must review all alerts and use clinical judgment",
+    "Adjust thresholds based on institutional needs",
+    "Consider patient-specific factors (e.g., bipolar disorder risk)"
+  ]
+}

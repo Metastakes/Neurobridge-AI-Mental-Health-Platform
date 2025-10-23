@@ -330,6 +330,9 @@ model Medication {
   stoppedAt     DateTime?
   prescriberId  String?
 
+  // Patch 04A: Side effects
+  sideEffects   SideEffectEvent[]
+
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -379,6 +382,9 @@ model Encounter {
 
   // Patch 04: AI feedback
   aiFeedbackLogs    AiFeedbackLog[]
+
+  // Patch 04A: Side effects tracking
+  sideEffects       SideEffectEvent[]
 
   // Duration (for billing)
   durationMinutes   Int?
@@ -898,4 +904,27 @@ model AiAdviceCache {
   updatedAt    DateTime @default(now()) @updatedAt
 
   @@index([updatedAt])
+}
+
+// ============================================
+// PATCH 04A: SIDE EFFECTS TRACKING
+// ============================================
+
+// Side effect events captured during encounters
+model SideEffectEvent {
+  id           String     @id @default(cuid())
+  encounterId  String
+  encounter    Encounter  @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  medOrderId   String
+  medication   Medication @relation(fields: [medOrderId], references: [id], onDelete: Cascade)
+
+  effect       String     // e.g., "tremor", "nausea", "weight gain"
+  severity     String     @default("mild") // 'mild', 'moderate', 'severe'
+  onset        DateTime?  @db.Date
+  notes        String?
+
+  createdAt    DateTime   @default(now())
+
+  @@index([encounterId])
+  @@index([medOrderId])
 }
