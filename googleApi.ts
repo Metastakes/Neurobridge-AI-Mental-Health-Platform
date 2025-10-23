@@ -137,3 +137,17 @@ export const addCalendarEvent = async (summary: string, startDateTime: string, e
         throw error;
     }
 };
+
+export const deleteCalendarEvent = async (eventId: string): Promise<void> => {
+    try {
+        await gapi.client.calendar.events.delete({
+            'calendarId': 'primary',
+            'eventId': eventId,
+            'sendNotifications': true, // Notify attendees of cancellation
+        });
+        console.log('Event deleted:', eventId);
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        throw error;
+    }
+};

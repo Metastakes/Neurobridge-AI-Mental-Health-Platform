@@ -1,12 +1,12 @@
 // components/patient/PatientSchedule.tsx
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 // Fix: Add file extensions to imports to resolve module errors.
-import { ChevronLeft, ChevronRight, Video, User as UserIcon, Google, ClipboardCheck } from '../Icons.tsx';
+import { ChevronLeft, ChevronRight, Video, User as UserIcon, Google, ClipboardCheck, X } from '../Icons.tsx';
 import { getDaysInMonth, getFirstDayOfMonth } from '../../utils/date.ts';
 import { Patient, User as AppUser, CalendarEvent } from '../../types.ts';
 import RequestAppointmentModal from './RequestAppointmentModal.tsx';
 import { useGoogleApi } from '../../GoogleApiContext.tsx';
-import { listUpcomingEvents } from '../../googleApi.ts';
+import { listUpcomingEvents, deleteCalendarEvent } from '../../googleApi.ts';
 
 interface PatientScheduleProps {
     patient: Patient;
@@ -55,6 +55,24 @@ const PatientSchedule: React.FC<PatientScheduleProps> = ({ patient, allUsers }) 
     
     const handleDateClick = (day: number) => {
         setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
+    };
+
+    const handleCancelAppointment = async (eventId: string, eventSummary: string) => {
+        if (!confirm(`Are you sure you want to cancel:\n"${eventSummary}"?\n\nThis will notify all attendees.`)) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await deleteCalendarEvent(eventId);
+            // Refresh the events list
+            await fetchEvents();
+        } catch (error) {
+            console.error("Failed to cancel appointment:", error);
+            alert("Failed to cancel appointment. Please try again.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const renderCalendar = () => {
@@ -154,12 +172,20 @@ const PatientSchedule: React.FC<PatientScheduleProps> = ({ patient, allUsers }) 
                              const apptTime = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).format(apptDateObj);
 
                              return (
-                                <div key={event.id} className="bg-gray-50 dark:bg-slate-700/50 p-4 rounded-lg border dark:border-slate-600 flex gap-4 items-center">
+                                <div key={event.id} className="bg-gray-50 dark:bg-slate-700/50 p-4 rounded-lg border dark:border-slate-600 flex gap-4 items-start relative">
+                                    <button
+                                        onClick={() => handleCancelAppointment(event.id, event.summary)}
+                                        className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full transition-colors"
+                                        title="Cancel appointment"
+                                        disabled={loading}
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
                                     <div className="text-center border-r dark:border-slate-600 pr-4">
                                         <p className="text-sm font-semibold text-red-600 dark:text-red-400">{apptDateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</p>
                                         <p className="text-2xl font-bold text-gray-800 dark:text-gray-200">{apptDateObj.getDate()}</p>
                                     </div>
-                                    <div className="flex-grow overflow-hidden">
+                                    <div className="flex-grow overflow-hidden pr-8">
                                         <p className="font-bold text-gray-800 dark:text-gray-200 truncate" title={event.summary}>{event.summary}</p>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">{apptTime}</p>
                                         {event.hangoutLink ? (

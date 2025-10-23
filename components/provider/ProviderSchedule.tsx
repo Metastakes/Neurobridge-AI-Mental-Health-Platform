@@ -1,10 +1,10 @@
 // components/provider/ProviderSchedule.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useGoogleApi } from '../../GoogleApiContext.tsx';
-import { listUpcomingEvents } from '../../googleApi.ts';
+import { listUpcomingEvents, deleteCalendarEvent } from '../../googleApi.ts';
 import { CalendarEvent, Provider } from '../../types.ts';
 import { getDaysInMonth, getFirstDayOfMonth } from '../../utils/date.ts';
-import { ChevronLeft, ChevronRight, Google, LogOut, ClipboardCheck } from '../Icons.tsx';
+import { ChevronLeft, ChevronRight, Google, LogOut, ClipboardCheck, X } from '../Icons.tsx';
 
 interface ProviderScheduleProps {
     provider: Provider;
@@ -37,6 +37,23 @@ const ProviderSchedule: React.FC<ProviderScheduleProps> = ({ provider }) => {
         setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
     };
 
+    const handleCancelAppointment = async (eventId: string, eventSummary: string) => {
+        if (!confirm(`Cancel appointment:\n"${eventSummary}"?\n\nThis will notify all attendees.`)) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await deleteCalendarEvent(eventId);
+            await fetchEvents();
+        } catch (error) {
+            console.error("Failed to cancel appointment:", error);
+            alert("Failed to cancel appointment. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const renderCalendar = () => {
         const daysInMonth = getDaysInMonth(currentDate);
         const firstDay = getFirstDayOfMonth(currentDate);
@@ -64,8 +81,19 @@ const ProviderSchedule: React.FC<ProviderScheduleProps> = ({ provider }) => {
                     </div>
                     <div className="text-xs mt-1 space-y-1">
                         {eventsForDay.map(e => (
-                            <div key={e.id} className="bg-indigo-100 dark:bg-indigo-900/50 p-1 rounded-md text-indigo-800 dark:text-indigo-300 truncate" title={e.summary}>
-                                {e.summary}
+                            <div key={e.id} className="bg-indigo-100 dark:bg-indigo-900/50 p-1 rounded-md text-indigo-800 dark:text-indigo-300 flex items-center justify-between group" title={e.summary}>
+                                <span className="truncate flex-1">{e.summary}</span>
+                                <button
+                                    onClick={(evt) => {
+                                        evt.stopPropagation();
+                                        handleCancelAppointment(e.id, e.summary);
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 ml-1 p-0.5 hover:bg-red-200 dark:hover:bg-red-800 rounded transition-opacity"
+                                    title="Cancel appointment"
+                                    disabled={loading}
+                                >
+                                    <X className="w-3 h-3 text-red-600 dark:text-red-400" />
+                                </button>
                             </div>
                         ))}
                     </div>
