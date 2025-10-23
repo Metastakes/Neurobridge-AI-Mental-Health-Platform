@@ -1,7 +1,7 @@
 // components/patient/RequestAppointmentModal.tsx
 import React, { useState } from 'react';
 import { useGoogleApi } from '../../GoogleApiContext.tsx';
-import { addCalendarEvent } from '../../googleApi.ts';
+import { addCalendarEvent, listUpcomingEvents } from '../../googleApi.ts';
 import { Patient, User } from '../../types.ts';
 import { X, Google } from '../Icons.tsx';
 
@@ -31,13 +31,29 @@ const RequestAppointmentModal: React.FC<RequestAppointmentModalProps> = ({ isOpe
             setError("Please select a date and time.");
             return;
         }
-        
+
         setIsLoading(true);
         setError('');
-        
+
         try {
             const startDateTime = new Date(`${date}T${time}:00`);
             const endDateTime = new Date(startDateTime.getTime() + 50 * 60000); // 50 minute session
+
+            // Check for duplicate sessions at the same time
+            const existingEvents = await listUpcomingEvents();
+            const duplicateSession = existingEvents.find(event => {
+                if (!event.start.dateTime) return false;
+                const eventStart = new Date(event.start.dateTime);
+                // Check if event starts within 5 minutes of the selected time
+                const timeDiff = Math.abs(eventStart.getTime() - startDateTime.getTime());
+                return timeDiff < 5 * 60000 && event.summary?.includes(provider.name);
+            });
+
+            if (duplicateSession) {
+                setError("A session with this provider already exists at this time. Please choose a different time slot.");
+                setIsLoading(false);
+                return;
+            }
 
             await addCalendarEvent(
                 `Therapy Session: ${provider.name} & ${patient.name}`,
@@ -45,7 +61,7 @@ const RequestAppointmentModal: React.FC<RequestAppointmentModalProps> = ({ isOpe
                 endDateTime.toISOString(),
                 provider.email
             );
-            
+
             setStep(3); // Success step
             onAppointmentBooked();
         } catch (err) {

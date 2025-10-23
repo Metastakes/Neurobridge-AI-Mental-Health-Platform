@@ -24,53 +24,102 @@ export const GoogleApiProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     useEffect(() => {
         const loadApis = () => {
-            // Load the GAPI client
-            const gapiScript = document.createElement('script');
-            gapiScript.src = 'https://apis.google.com/js/api.js';
-            gapiScript.async = true;
-            gapiScript.defer = true;
-            gapiScript.onload = () => {
-                gapi.load('client', async () => {
-                    try {
-                        await initGapiClient();
-                        setIsGapiLoaded(true);
-                    } catch (error: any) {
-                        // Improved error logging to handle different Google API error structures
-                        let errorMessage = "An unknown error occurred during Google API client initialization.";
-                        if (error && typeof error === 'object') {
-                            const apiError = error.error || (error.result && error.result.error);
-                            if (apiError && apiError.message) {
-                                errorMessage = `API Error: ${apiError.message} (Code: ${apiError.code}). Please ensure your Google Cloud project is configured correctly and your organization has a BAA with Google for HIPAA compliance.`;
-                            } else {
-                                // Fallback for any other structure
-                                errorMessage = `Unexpected error structure: ${JSON.stringify(error, null, 2)}`;
-                            }
-                        }
-                        console.error("Error initializing Google API client:", errorMessage);
-                        setInitError(errorMessage);
-                    }
-                });
-            };
-            document.body.appendChild(gapiScript);
+            // Check if GAPI script is already loaded
+            const existingGapiScript = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
 
-            // Load the GIS client
-            const gisScript = document.createElement('script');
-            gisScript.src = 'https://accounts.google.com/gsi/client';
-            gisScript.async = true;
-            gisScript.defer = true;
-            gisScript.onload = () => {
-                initGisClient((tokenResponse) => {
-                    if (tokenResponse.error) {
-                        console.error('GIS Error:', tokenResponse.error);
-                        setIsSignedIn(false);
-                    } else {
-                        gapi.client.setToken(tokenResponse);
-                        setIsSignedIn(true);
-                    }
-                });
-                setIsGisLoaded(true);
-            };
-            document.body.appendChild(gisScript);
+            if (existingGapiScript) {
+                // Script already exists, check if gapi is ready
+                if (typeof gapi !== 'undefined' && gapi.client) {
+                    setIsGapiLoaded(true);
+                } else {
+                    // Wait for the existing script to load
+                    existingGapiScript.addEventListener('load', () => {
+                        gapi.load('client', async () => {
+                            try {
+                                await initGapiClient();
+                                setIsGapiLoaded(true);
+                            } catch (error: any) {
+                                handleGapiError(error);
+                            }
+                        });
+                    });
+                }
+            } else {
+                // Load the GAPI client
+                const gapiScript = document.createElement('script');
+                gapiScript.src = 'https://apis.google.com/js/api.js';
+                gapiScript.async = true;
+                gapiScript.defer = true;
+                gapiScript.onload = () => {
+                    gapi.load('client', async () => {
+                        try {
+                            await initGapiClient();
+                            setIsGapiLoaded(true);
+                        } catch (error: any) {
+                            handleGapiError(error);
+                        }
+                    });
+                };
+                document.body.appendChild(gapiScript);
+            }
+
+            // Check if GIS script is already loaded
+            const existingGisScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+
+            if (existingGisScript) {
+                // Script already exists, initialize if ready
+                if (typeof google !== 'undefined' && google.accounts) {
+                    initGisClient((tokenResponse) => {
+                        handleGisCallback(tokenResponse);
+                    });
+                    setIsGisLoaded(true);
+                } else {
+                    // Wait for the existing script to load
+                    existingGisScript.addEventListener('load', () => {
+                        initGisClient((tokenResponse) => {
+                            handleGisCallback(tokenResponse);
+                        });
+                        setIsGisLoaded(true);
+                    });
+                }
+            } else {
+                // Load the GIS client
+                const gisScript = document.createElement('script');
+                gisScript.src = 'https://accounts.google.com/gsi/client';
+                gisScript.async = true;
+                gisScript.defer = true;
+                gisScript.onload = () => {
+                    initGisClient((tokenResponse) => {
+                        handleGisCallback(tokenResponse);
+                    });
+                    setIsGisLoaded(true);
+                };
+                document.body.appendChild(gisScript);
+            }
+        };
+
+        const handleGapiError = (error: any) => {
+            let errorMessage = "An unknown error occurred during Google API client initialization.";
+            if (error && typeof error === 'object') {
+                const apiError = error.error || (error.result && error.result.error);
+                if (apiError && apiError.message) {
+                    errorMessage = `API Error: ${apiError.message} (Code: ${apiError.code}). Please ensure your Google Cloud project is configured correctly and your organization has a BAA with Google for HIPAA compliance.`;
+                } else {
+                    errorMessage = `Unexpected error structure: ${JSON.stringify(error, null, 2)}`;
+                }
+            }
+            console.error("Error initializing Google API client:", errorMessage);
+            setInitError(errorMessage);
+        };
+
+        const handleGisCallback = (tokenResponse: any) => {
+            if (tokenResponse.error) {
+                console.error('GIS Error:', tokenResponse.error);
+                setIsSignedIn(false);
+            } else {
+                gapi.client.setToken(tokenResponse);
+                setIsSignedIn(true);
+            }
         };
 
         loadApis();

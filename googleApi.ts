@@ -25,6 +25,7 @@ declare namespace google {
 
 import { GOOGLE_API_KEY, GOOGLE_CLIENT_ID } from './config.ts';
 import { CalendarEvent } from './types.ts';
+import { v4 as uuidv4 } from 'uuid';
 
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
@@ -111,7 +112,7 @@ export const addCalendarEvent = async (summary: string, startDateTime: string, e
             },
             'conferenceData': {
                 'createRequest': {
-                    'requestId': `neurobridge-${Date.now()}`,
+                    'requestId': `neurobridge-${uuidv4()}`,
                     'conferenceSolutionKey': {
                         'type': 'hangoutsMeet'
                     }
