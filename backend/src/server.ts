@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { logger } from './config/logger.js';
+import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.routes.js';
 import patientRoutes from './routes/patient.routes.js';
 import appointmentRoutes from './routes/appointment.routes.js';
@@ -106,10 +107,18 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     logger.info(`🚀 NeuroBridge API server running on port ${PORT}`);
     logger.info(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
     logger.info(`🔒 CORS enabled for: ${corsOptions.origin}`);
+
+    // Test database connection
+    const dbConnected = await testConnection();
+    if (dbConnected) {
+        logger.info('✅ Database connection established');
+    } else {
+        logger.warn('⚠️  Database connection failed - running without database');
+    }
 });
 
 // Graceful shutdown
