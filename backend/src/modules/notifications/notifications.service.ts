@@ -9,6 +9,7 @@ import { NotificationsGateway } from './notifications.gateway';
 import { SmsService } from '../communications/sms.service';
 import { EmailService } from '../communications/email.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationPreferencesService } from './notification-preferences.service';
 
 export interface CrisisAlertEvent {
   providerId: string;
@@ -49,6 +50,7 @@ export class NotificationsService {
     private readonly smsService: SmsService,
     private readonly emailService: EmailService,
     private readonly prisma: PrismaService,
+    private readonly preferencesService: NotificationPreferencesService,
   ) {}
 
   /**
@@ -163,37 +165,19 @@ export class NotificationsService {
 
   /**
    * Send crisis alert via SMS and Email (fallback for offline providers)
+   * Respects provider notification preferences
    */
   private async sendCrisisAlertFallback(event: CrisisAlertEvent) {
     try {
-      // Get provider contact info
-      const provider = await this.prisma.provider.findUnique({
-        where: { id: event.providerId },
-        include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true,
-            },
-          },
-        },
-      });
+      // Check SMS preferences
+      const smsCheck = await this.preferencesService.shouldReceiveSms(
+        event.providerId,
+        'crisis',
+      );
 
-      if (!provider) {
-        this.logger.error(`Provider ${event.providerId} not found for fallback notification`);
-        return;
-      }
-
-      const providerName = `${provider.user.firstName} ${provider.user.lastName}`;
-      const providerEmail = provider.user.email;
-      const providerPhone = provider.user.phone;
-
-      // Send SMS if phone number available
-      if (providerPhone && this.smsService.isOperational()) {
+      if (smsCheck.should && smsCheck.number && this.smsService.isOperational()) {
         const smsResult = await this.smsService.sendCrisisAlert(
-          providerPhone,
+          smsCheck.number,
           event.patientName,
           event.indicators,
           event.emergencyContact,
@@ -205,13 +189,20 @@ export class NotificationsService {
           this.logger.error(`Failed to send crisis SMS: ${smsResult.error}`);
         }
       } else {
-        this.logger.warn(`SMS not sent: phone=${providerPhone}, operational=${this.smsService.isOperational()}`);
+        this.logger.log(`SMS not sent to provider ${event.providerId}: ${smsCheck.reason || 'preferences'}`);
       }
 
-      // Send Email
-      if (providerEmail && this.emailService.isOperational()) {
+      // Check Email preferences
+      const emailCheck = await this.preferencesService.shouldReceiveEmail(
+        event.providerId,
+        'crisis',
+      );
+
+      if (emailCheck.should && emailCheck.email && this.emailService.isOperational()) {
+        const providerName = await this.preferencesService.getProviderName(event.providerId);
+
         const emailResult = await this.emailService.sendCrisisAlert(
-          providerEmail,
+          emailCheck.email,
           providerName,
           event.patientName,
           event.patientId,
@@ -225,7 +216,7 @@ export class NotificationsService {
           this.logger.error(`Failed to send crisis email: ${emailResult.error}`);
         }
       } else {
-        this.logger.warn(`Email not sent: email=${providerEmail}, operational=${this.emailService.isOperational()}`);
+        this.logger.log(`Email not sent to provider ${event.providerId}: ${emailCheck.reason || 'preferences'}`);
       }
     } catch (error) {
       this.logger.error(`Error sending crisis alert fallback: ${error.message}`);
@@ -234,37 +225,19 @@ export class NotificationsService {
 
   /**
    * Send safety check alert via SMS and Email (fallback for offline providers)
+   * Respects provider notification preferences
    */
   private async sendSafetyCheckFallback(event: SafetyCheckEvent) {
     try {
-      // Get provider contact info
-      const provider = await this.prisma.provider.findUnique({
-        where: { id: event.providerId },
-        include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true,
-            },
-          },
-        },
-      });
+      // Check SMS preferences
+      const smsCheck = await this.preferencesService.shouldReceiveSms(
+        event.providerId,
+        'safety_check',
+      );
 
-      if (!provider) {
-        this.logger.error(`Provider ${event.providerId} not found for fallback notification`);
-        return;
-      }
-
-      const providerName = `${provider.user.firstName} ${provider.user.lastName}`;
-      const providerEmail = provider.user.email;
-      const providerPhone = provider.user.phone;
-
-      // Send SMS
-      if (providerPhone && this.smsService.isOperational()) {
+      if (smsCheck.should && smsCheck.number && this.smsService.isOperational()) {
         const smsResult = await this.smsService.sendSafetyCheckAlert(
-          providerPhone,
+          smsCheck.number,
           event.patientName,
           event.reason,
         );
@@ -272,12 +245,21 @@ export class NotificationsService {
         if (smsResult.success) {
           this.logger.log(`Safety check SMS sent to provider ${event.providerId}`);
         }
+      } else {
+        this.logger.log(`SMS not sent to provider ${event.providerId}: ${smsCheck.reason || 'preferences'}`);
       }
 
-      // Send Email
-      if (providerEmail && this.emailService.isOperational()) {
+      // Check Email preferences
+      const emailCheck = await this.preferencesService.shouldReceiveEmail(
+        event.providerId,
+        'safety_check',
+      );
+
+      if (emailCheck.should && emailCheck.email && this.emailService.isOperational()) {
+        const providerName = await this.preferencesService.getProviderName(event.providerId);
+
         const emailResult = await this.emailService.sendSafetyCheckAlert(
-          providerEmail,
+          emailCheck.email,
           providerName,
           event.patientName,
           event.patientId,
@@ -287,6 +269,8 @@ export class NotificationsService {
         if (emailResult.success) {
           this.logger.log(`Safety check email sent to provider ${event.providerId}`);
         }
+      } else {
+        this.logger.log(`Email not sent to provider ${event.providerId}: ${emailCheck.reason || 'preferences'}`);
       }
     } catch (error) {
       this.logger.error(`Error sending safety check fallback: ${error.message}`);
@@ -295,37 +279,22 @@ export class NotificationsService {
 
   /**
    * Send risk alert via SMS and Email (fallback for offline providers)
+   * Respects provider notification preferences
    */
   private async sendRiskAlertFallback(event: RiskAlertEvent) {
     try {
-      // Get provider contact info
-      const provider = await this.prisma.provider.findUnique({
-        where: { id: event.providerId },
-        include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true,
-            },
-          },
-        },
-      });
+      // Map severity to alert type
+      const alertType = event.severity === 'high' ? 'high_risk' : event.severity === 'medium' ? 'medium_risk' : 'low_risk';
 
-      if (!provider) {
-        this.logger.error(`Provider ${event.providerId} not found for fallback notification`);
-        return;
-      }
+      // Check SMS preferences
+      const smsCheck = await this.preferencesService.shouldReceiveSms(
+        event.providerId,
+        alertType as any,
+      );
 
-      const providerName = `${provider.user.firstName} ${provider.user.lastName}`;
-      const providerEmail = provider.user.email;
-      const providerPhone = provider.user.phone;
-
-      // Send SMS
-      if (providerPhone && this.smsService.isOperational()) {
+      if (smsCheck.should && smsCheck.number && this.smsService.isOperational()) {
         const smsResult = await this.smsService.sendRiskAlert(
-          providerPhone,
+          smsCheck.number,
           event.patientName,
           event.kind,
           event.message,
@@ -334,12 +303,21 @@ export class NotificationsService {
         if (smsResult.success) {
           this.logger.log(`Risk alert SMS sent to provider ${event.providerId}`);
         }
+      } else {
+        this.logger.log(`SMS not sent to provider ${event.providerId}: ${smsCheck.reason || 'preferences'}`);
       }
 
-      // Send Email
-      if (providerEmail && this.emailService.isOperational()) {
+      // Check Email preferences
+      const emailCheck = await this.preferencesService.shouldReceiveEmail(
+        event.providerId,
+        alertType as any,
+      );
+
+      if (emailCheck.should && emailCheck.email && this.emailService.isOperational()) {
+        const providerName = await this.preferencesService.getProviderName(event.providerId);
+
         const emailResult = await this.emailService.sendRiskAlert(
-          providerEmail,
+          emailCheck.email,
           providerName,
           event.patientName,
           event.patientId,
@@ -351,6 +329,8 @@ export class NotificationsService {
         if (emailResult.success) {
           this.logger.log(`Risk alert email sent to provider ${event.providerId}`);
         }
+      } else {
+        this.logger.log(`Email not sent to provider ${event.providerId}: ${emailCheck.reason || 'preferences'}`);
       }
     } catch (error) {
       this.logger.error(`Error sending risk alert fallback: ${error.message}`);

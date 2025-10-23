@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationsService } from './notifications.service';
+import { NotificationPreferencesService } from './notification-preferences.service';
+import { NotificationPreferencesController } from './notification-preferences.controller';
 import { CommunicationsModule } from '../communications/communications.module';
 import { PrismaModule } from '../../common/prisma/prisma.module';
 
@@ -14,7 +16,16 @@ import { PrismaModule } from '../../common/prisma/prisma.module';
     CommunicationsModule,
     PrismaModule,
   ],
-  providers: [NotificationsGateway, NotificationsService],
-  exports: [NotificationsGateway, NotificationsService],
+  controllers: [NotificationPreferencesController],
+  providers: [
+    NotificationsGateway,
+    NotificationsService,
+    NotificationPreferencesService,
+  ],
+  exports: [
+    NotificationsGateway,
+    NotificationsService,
+    NotificationPreferencesService,
+  ],
 })
 export class NotificationsModule {}

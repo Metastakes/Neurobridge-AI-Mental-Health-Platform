@@ -255,14 +255,15 @@ model Provider {
   credentials       String[]
 
   // Related records
-  patients          Patient[]
-  encounters        Encounter[]
-  caseNotes         CaseNote[]
-  messagesReceived  Message[]
-  referralsGiven    Referral[] @relation("ReferrerProvider")
-  referralsReceived Referral[] @relation("RefereeProvider")
-  socialShares      SocialShare[]
-  reviews           Review[]
+  patients                Patient[]
+  encounters              Encounter[]
+  caseNotes               CaseNote[]
+  messagesReceived        Message[]
+  referralsGiven          Referral[] @relation("ReferrerProvider")
+  referralsReceived       Referral[] @relation("RefereeProvider")
+  socialShares            SocialShare[]
+  reviews                 Review[]
+  notificationPreferences NotificationPreferences?
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -927,4 +928,46 @@ model SideEffectEvent {
 
   @@index([encounterId])
   @@index([medOrderId])
+}
+
+// ============================================
+// NOTIFICATION PREFERENCES
+// ============================================
+
+// Provider notification preferences for SMS/Email alerts
+model NotificationPreferences {
+  id         String   @id @default(cuid())
+  providerId String   @unique
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  // Channel preferences
+  enableSms          Boolean @default(true)
+  enableEmail        Boolean @default(true)
+  enableWebSocket    Boolean @default(true)
+
+  // Alert type preferences (what triggers SMS/Email)
+  crisisAlerts       Boolean @default(true)  // Always notify for crises
+  safetyCheckAlerts  Boolean @default(true)  // Patient safety check requests
+  highRiskAlerts     Boolean @default(true)  // High severity risk alerts
+  mediumRiskAlerts   Boolean @default(false) // Medium severity risk alerts
+  lowRiskAlerts      Boolean @default(false) // Low severity risk alerts
+
+  // Quiet hours (times when SMS/Email are suppressed)
+  enableQuietHours   Boolean @default(false)
+  quietHoursStart    String? // e.g., "22:00" (10 PM)
+  quietHoursEnd      String? // e.g., "08:00" (8 AM)
+  quietHoursTimezone String? // e.g., "America/New_York"
+
+  // Delivery preferences
+  smsForCriticalOnly Boolean @default(false) // Only SMS for critical (crisis + safety checks)
+  emailDigestEnabled Boolean @default(false) // Future: daily email digest instead of instant
+
+  // Contact override (if different from user profile)
+  overrideSmsNumber  String? // E.164 format phone number
+  overrideEmail      String? // Email address
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
 }
