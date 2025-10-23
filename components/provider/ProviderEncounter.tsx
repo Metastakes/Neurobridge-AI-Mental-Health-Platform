@@ -71,6 +71,9 @@ export default function ProviderEncounter({ encounterId, apiBaseUrl = 'http://lo
   const [objective, setObjective] = useState('');
   const [assessment, setAssessment] = useState('');
   const [plan, setPlan] = useState('');
+  const [generatingSoap, setGeneratingSoap] = useState(false);
+  const [originalSoapNote, setOriginalSoapNote] = useState<any>(null);
+  const [soapWasModified, setSoapWasModified] = useState(false);
 
   // Side effects state
   const [sideEffects, setSideEffects] = useState<SideEffect[]>([]);
@@ -127,6 +130,92 @@ export default function ProviderEncounter({ encounterId, apiBaseUrl = 'http://lo
     }
   };
 
+  const generateAiSoapNote = async () => {
+    setGeneratingSoap(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${apiBaseUrl}/ai/soap/generate/${encounterId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate SOAP note');
+      }
+
+      const data = await response.json();
+      const soap = data.soapNote;
+
+      setOriginalSoapNote(soap);
+      setSubjective(soap.subjective);
+      setObjective(soap.objective);
+      setAssessment(soap.assessment);
+      setPlan(soap.plan);
+      setSoapWasModified(false);
+
+      alert('✨ AI SOAP note generated! Please review and modify as needed.');
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setGeneratingSoap(false);
+    }
+  };
+
+  const saveSoapNote = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${apiBaseUrl}/ai/soap/save/${encounterId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subjective,
+          objective,
+          assessment,
+          plan,
+          wasModified: soapWasModified,
+          originalSoapNote,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save SOAP note');
+      }
+
+      setShowTaskComplete(true);
+      setTimeout(() => setShowTaskComplete(false), 2000);
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  // Track modifications to SOAP note
+  const handleSoapChange = (field: string, value: string) => {
+    if (originalSoapNote) {
+      setSoapWasModified(true);
+    }
+
+    switch (field) {
+      case 'subjective':
+        setSubjective(value);
+        break;
+      case 'objective':
+        setObjective(value);
+        break;
+      case 'assessment':
+        setAssessment(value);
+        break;
+      case 'plan':
+        setPlan(value);
+        break;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -165,10 +254,14 @@ export default function ProviderEncounter({ encounterId, apiBaseUrl = 'http://lo
             objective={objective}
             assessment={assessment}
             plan={plan}
-            onSubjectiveChange={setSubjective}
-            onObjectiveChange={setObjective}
-            onAssessmentChange={setAssessment}
-            onPlanChange={setPlan}
+            onSubjectiveChange={(val) => handleSoapChange('subjective', val)}
+            onObjectiveChange={(val) => handleSoapChange('objective', val)}
+            onAssessmentChange={(val) => handleSoapChange('assessment', val)}
+            onPlanChange={(val) => handleSoapChange('plan', val)}
+            onGenerateAI={generateAiSoapNote}
+            onSave={saveSoapNote}
+            generatingAI={generatingSoap}
+            wasModified={soapWasModified}
           />
 
           <SideEffectsGrid
@@ -289,6 +382,10 @@ function SoapEditor({
   onObjectiveChange,
   onAssessmentChange,
   onPlanChange,
+  onGenerateAI,
+  onSave,
+  generatingAI,
+  wasModified,
 }: {
   subjective: string;
   objective: string;
@@ -298,10 +395,51 @@ function SoapEditor({
   onObjectiveChange: (val: string) => void;
   onAssessmentChange: (val: string) => void;
   onPlanChange: (val: string) => void;
+  onGenerateAI?: () => void;
+  onSave?: () => void;
+  generatingAI?: boolean;
+  wasModified?: boolean;
 }) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">SOAP Note</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-gray-800">SOAP Note</h2>
+        <div className="flex gap-2">
+          {onGenerateAI && (
+            <button
+              onClick={onGenerateAI}
+              disabled={generatingAI}
+              className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-md"
+            >
+              {generatingAI ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <span>✨</span>
+                  Generate with AI
+                </>
+              )}
+            </button>
+          )}
+          {onSave && (
+            <button
+              onClick={onSave}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition-all shadow-md"
+            >
+              💾 Save Note
+            </button>
+          )}
+        </div>
+      </div>
+
+      {wasModified && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-md px-3 py-2 mb-4 text-sm text-yellow-800">
+          ✏️ Modified from AI-generated version
+        </div>
+      )}
 
       <div className="space-y-4">
         <div>
