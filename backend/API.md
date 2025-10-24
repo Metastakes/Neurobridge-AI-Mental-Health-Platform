@@ -864,6 +864,370 @@ Authorization: Bearer <access_token>
 
 ---
 
+## Provider Endpoints
+
+Provider endpoints support both public access (for searching providers) and authenticated access (for profile management).
+
+### 22. List All Providers
+
+Get list of providers with optional filters.
+
+**Endpoint:** `GET /providers`
+
+**Authentication:** Optional
+
+**Query Parameters:**
+- `specialty` (optional): Filter by specialty (partial match)
+- `acceptsNewPatients` (optional): `true` or `false`
+- `isActive` (optional): `true` or `false`
+- `search` (optional): Search in name, email, or specialty
+- `limit` (optional): Number of results (1-100, default 50)
+- `offset` (optional): Pagination offset
+
+**Success Response:** `200 OK`
+```json
+{
+  "providers": [
+    {
+      "id": 1,
+      "name": "Dr. Sarah Evans",
+      "email": "dr.evans@neuro.io",
+      "specialty": "Clinical Psychology",
+      "years_of_experience": 12,
+      "bio": "Specializing in anxiety and depression treatment",
+      "accepts_new_patients": true,
+      "hourly_rate": 150.00,
+      "languages_spoken": "English, Spanish"
+    }
+  ],
+  "total": 5,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+---
+
+### 23. Get Available Providers
+
+Get providers currently accepting new patients.
+
+**Endpoint:** `GET /providers/available`
+
+**Authentication:** None required
+
+**Success Response:** `200 OK`
+```json
+{
+  "providers": [
+    {
+      "id": 1,
+      "name": "Dr. Sarah Evans",
+      "specialty": "Clinical Psychology",
+      "accepts_new_patients": true
+    }
+  ],
+  "count": 3
+}
+```
+
+---
+
+### 24. Get Current Provider Profile
+
+Get authenticated provider's own profile with statistics.
+
+**Endpoint:** `GET /providers/me`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Role Required:** `provider`
+
+**Success Response:** `200 OK`
+```json
+{
+  "provider": {
+    "id": 1,
+    "name": "Dr. Sarah Evans",
+    "email": "dr.evans@neuro.io",
+    "specialty": "Clinical Psychology",
+    "license_number": "PSY12345",
+    "years_of_experience": 12,
+    "bio": "Specializing in anxiety and depression",
+    "education": "PhD Psychology, Stanford University",
+    "certifications": "CBT Certified, Trauma Specialist",
+    "languages_spoken": "English, Spanish",
+    "accepts_new_patients": true,
+    "hourly_rate": 150.00
+  },
+  "statistics": {
+    "patient_count": 28,
+    "upcoming_appointments": 15,
+    "total_sessions": 342,
+    "completed_sessions": 318,
+    "cancelled_sessions": 24,
+    "average_session_duration": 50
+  }
+}
+```
+
+---
+
+### 25. Get Providers by Specialty
+
+Filter providers by specialty.
+
+**Endpoint:** `GET /providers/specialty/:specialty`
+
+**Authentication:** None required
+
+**Success Response:** `200 OK`
+```json
+{
+  "providers": [
+    {
+      "id": 1,
+      "name": "Dr. Sarah Evans",
+      "specialty": "Clinical Psychology"
+    }
+  ],
+  "count": 2,
+  "specialty": "Clinical Psychology"
+}
+```
+
+---
+
+### 26. Get Provider by ID
+
+Get provider details by ID.
+
+**Endpoint:** `GET /providers/:id`
+
+**Authentication:** None required
+
+**Success Response:** `200 OK`
+```json
+{
+  "provider": {
+    "id": 1,
+    "name": "Dr. Sarah Evans",
+    "specialty": "Clinical Psychology",
+    "bio": "Specializing in anxiety and depression",
+    "years_of_experience": 12,
+    "accepts_new_patients": true
+  }
+}
+```
+
+---
+
+### 27. Get Provider with Statistics
+
+Get provider with aggregated statistics.
+
+**Endpoint:** `GET /providers/:id/stats`
+
+**Authentication:** None required
+
+**Success Response:** `200 OK`
+```json
+{
+  "provider": {
+    "id": 1,
+    "name": "Dr. Sarah Evans",
+    "specialty": "Clinical Psychology",
+    "patient_count": 28,
+    "upcoming_appointment_count": 15,
+    "total_sessions_completed": 318
+  }
+}
+```
+
+---
+
+### 28. Get Provider Statistics
+
+Get detailed provider statistics (provider or mentor only).
+
+**Endpoint:** `GET /providers/:id/statistics`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Authorization:** Provider can only view own statistics. Mentors can view all.
+
+**Success Response:** `200 OK`
+```json
+{
+  "provider_id": 1,
+  "provider_name": "Dr. Sarah Evans",
+  "statistics": {
+    "patient_count": 28,
+    "upcoming_appointments": 15,
+    "total_sessions": 342,
+    "completed_sessions": 318,
+    "cancelled_sessions": 24,
+    "average_session_duration": 50
+  }
+}
+```
+
+---
+
+### 29. Get Provider Availability
+
+Get provider's weekly availability schedule.
+
+**Endpoint:** `GET /providers/:id/availability`
+
+**Authentication:** None required
+
+**Success Response:** `200 OK`
+```json
+{
+  "provider_id": 1,
+  "provider_name": "Dr. Sarah Evans",
+  "availability": [
+    {
+      "id": 1,
+      "day_of_week": 1,
+      "start_time": "09:00",
+      "end_time": "17:00",
+      "is_available": true
+    },
+    {
+      "id": 2,
+      "day_of_week": 2,
+      "start_time": "09:00",
+      "end_time": "17:00",
+      "is_available": true
+    }
+  ]
+}
+```
+
+**Note:** `day_of_week` is 0-6 (Sunday-Saturday)
+
+---
+
+### 30. Update Provider Profile
+
+Update provider information.
+
+**Endpoint:** `PUT /providers/:id`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Authorization:** Providers can only update their own profile. Mentors can update any provider.
+
+**Request Body:**
+```json
+{
+  "name": "Dr. Sarah Evans",
+  "phone": "+1-555-0102",
+  "specialty": "Clinical Psychology",
+  "license_number": "PSY12345",
+  "years_of_experience": 13,
+  "bio": "Updated bio",
+  "education": "PhD Psychology, Stanford University",
+  "certifications": "CBT Certified, Trauma Specialist",
+  "languages_spoken": "English, Spanish, French",
+  "accepts_new_patients": true,
+  "hourly_rate": 160.00
+}
+```
+
+**Success Response:** `200 OK`
+```json
+{
+  "message": "Provider updated successfully",
+  "provider": {
+    "id": 1,
+    "name": "Dr. Sarah Evans",
+    "specialty": "Clinical Psychology",
+    "hourly_rate": 160.00
+  }
+}
+```
+
+---
+
+### 31. Set Provider Availability
+
+Set availability for a specific day and time (provider only).
+
+**Endpoint:** `POST /providers/:id/availability`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Role Required:** `provider`
+
+**Request Body:**
+```json
+{
+  "dayOfWeek": 1,
+  "startTime": "09:00",
+  "endTime": "17:00",
+  "isAvailable": true
+}
+```
+
+**Notes:**
+- `dayOfWeek`: 0-6 (Sunday-Saturday)
+- Time format: HH:MM (24-hour)
+- If availability exists for same day/time, it will be updated
+
+**Success Response:** `200 OK`
+```json
+{
+  "message": "Availability set successfully",
+  "availability": {
+    "id": 1,
+    "provider_id": 1,
+    "day_of_week": 1,
+    "start_time": "09:00",
+    "end_time": "17:00",
+    "is_available": true
+  }
+}
+```
+
+---
+
+### 32. Delete Provider Availability
+
+Remove availability slot (provider only).
+
+**Endpoint:** `DELETE /providers/:id/availability/:availabilityId`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Role Required:** `provider`
+
+**Success Response:** `200 OK`
+```json
+{
+  "message": "Availability deleted successfully"
+}
+```
+
+---
+
 ## Using curl Examples
 
 ### List Patients (Provider):
@@ -904,6 +1268,51 @@ curl -X POST http://localhost:3001/api/appointments/1/cancel \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"cancellationReason": "Schedule conflict"}'
+```
+
+### List Available Providers:
+```bash
+curl -X GET http://localhost:3001/api/providers/available
+```
+
+### Get Provider by ID:
+```bash
+curl -X GET http://localhost:3001/api/providers/1
+```
+
+### Get Providers by Specialty:
+```bash
+curl -X GET http://localhost:3001/api/providers/specialty/Clinical%20Psychology
+```
+
+### Get Provider Availability:
+```bash
+curl -X GET http://localhost:3001/api/providers/1/availability
+```
+
+### Set Provider Availability:
+```bash
+curl -X POST http://localhost:3001/api/providers/1/availability \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dayOfWeek": 1,
+    "startTime": "09:00",
+    "endTime": "17:00",
+    "isAvailable": true
+  }'
+```
+
+### Update Provider Profile:
+```bash
+curl -X PUT http://localhost:3001/api/providers/1 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bio": "Updated bio text",
+    "accepts_new_patients": true,
+    "hourly_rate": 160.00
+  }'
 ```
 
 ---
