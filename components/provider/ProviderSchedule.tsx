@@ -1,33 +1,29 @@
 // components/provider/ProviderSchedule.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { useGoogleApi } from '../../GoogleApiContext.tsx';
-import { listUpcomingEvents, deleteCalendarEvent } from '../../googleApi.ts';
-import { CalendarEvent, Provider } from '../../types.ts';
+import React, { useState, useEffect } from 'react';
+import { Provider } from '../../types.ts';
 import { getDaysInMonth, getFirstDayOfMonth } from '../../utils/date.ts';
-import { ChevronLeft, ChevronRight, Google, LogOut, ClipboardCheck, X } from '../Icons.tsx';
+import { ChevronLeft, ChevronRight, ClipboardCheck, X, Calendar as CalendarIcon } from '../Icons.tsx';
+import { useAppointments, cancelAppointment } from '../../hooks/useAppointments.ts';
 
 interface ProviderScheduleProps {
     provider: Provider;
 }
 
-const ProviderSchedule: React.FC<ProviderScheduleProps> = ({ provider }) => {
-    const { isSignedIn, signIn, signOut, isGapiLoaded, isGisLoaded, initError } = useGoogleApi();
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [currentDate, setCurrentDate] = useState(new Date());
-    
-    const fetchEvents = useCallback(async () => {
-        if (isSignedIn) {
-            setLoading(true);
-            const eventList = await listUpcomingEvents();
-            setEvents(eventList);
-            setLoading(false);
-        }
-    }, [isSignedIn]);
+interface Appointment {
+    id: number;
+    patient_name: string;
+    provider_name: string;
+    appointment_type: string;
+    scheduled_start: string;
+    scheduled_end: string;
+    status: string;
+    notes?: string;
+}
 
-    useEffect(() => {
-        fetchEvents();
-    }, [fetchEvents]);
+const ProviderSchedule: React.FC<ProviderScheduleProps> = ({ provider }) => {
+    const { appointments, loading, refetch } = useAppointments({ providerId: provider.id });
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [cancelling, setCancelling] = useState(false);
 
     const handlePrevMonth = () => {
         setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -37,20 +33,26 @@ const ProviderSchedule: React.FC<ProviderScheduleProps> = ({ provider }) => {
         setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
     };
 
-    const handleCancelAppointment = async (eventId: string, eventSummary: string) => {
-        if (!confirm(`Cancel appointment:\n"${eventSummary}"?\n\nThis will notify all attendees.`)) {
+    const handleCancelAppointment = async (appointmentId: number, appointmentSummary: string) => {
+        const reason = prompt(`Cancel appointment:\n"${appointmentSummary}"?\n\nPlease provide a reason for cancellation:`);
+
+        if (!reason) {
             return;
         }
 
-        setLoading(true);
+        setCancelling(true);
         try {
-            await deleteCalendarEvent(eventId);
-            await fetchEvents();
+            const result = await cancelAppointment(appointmentId, reason.trim());
+            if (result.success) {
+                await refetch();
+            } else {
+                alert(result.error || "Failed to cancel appointment. Please try again.");
+            }
         } catch (error) {
             console.error("Failed to cancel appointment:", error);
             alert("Failed to cancel appointment. Please try again.");
         } finally {
-            setLoading(false);
+            setCancelling(false);
         }
     };
 
@@ -58,10 +60,10 @@ const ProviderSchedule: React.FC<ProviderScheduleProps> = ({ provider }) => {
         const daysInMonth = getDaysInMonth(currentDate);
         const firstDay = getFirstDayOfMonth(currentDate);
         const today = new Date();
-        
-        const eventsInMonth = events.filter(event => {
-            const eventDate = new Date(event.start.dateTime || event.start.date!);
-            return eventDate.getMonth() === currentDate.getMonth() && eventDate.getFullYear() === currentDate.getFullYear();
+
+        const appointmentsInMonth = (appointments as Appointment[]).filter(appt => {
+            const apptDate = new Date(appt.scheduled_start);
+            return apptDate.getMonth() === currentDate.getMonth() && apptDate.getFullYear() === currentDate.getFullYear();
         });
 
         const calendarDays = [];
@@ -72,7 +74,7 @@ const ProviderSchedule: React.FC<ProviderScheduleProps> = ({ provider }) => {
         for (let day = 1; day <= daysInMonth; day++) {
             const loopDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
             const isToday = loopDate.toDateString() === today.toDateString();
-            const eventsForDay = eventsInMonth.filter(e => new Date(e.start.dateTime || e.start.date!).getDate() === day);
+            const appointmentsForDay = appointmentsInMonth.filter(appt => new Date(appt.scheduled_start).getDate() === day);
 
             calendarDays.push(
                 <div key={day} className="border-r border-b dark:border-slate-700 p-2 min-h-[120px]">
@@ -80,22 +82,40 @@ const ProviderSchedule: React.FC<ProviderScheduleProps> = ({ provider }) => {
                         {day}
                     </div>
                     <div className="text-xs mt-1 space-y-1">
-                        {eventsForDay.map(e => (
-                            <div key={e.id} className="bg-indigo-100 dark:bg-indigo-900/50 p-1 rounded-md text-indigo-800 dark:text-indigo-300 flex items-center justify-between group" title={e.summary}>
-                                <span className="truncate flex-1">{e.summary}</span>
-                                <button
-                                    onClick={(evt) => {
-                                        evt.stopPropagation();
-                                        handleCancelAppointment(e.id, e.summary);
-                                    }}
-                                    className="opacity-0 group-hover:opacity-100 ml-1 p-0.5 hover:bg-red-200 dark:hover:bg-red-800 rounded transition-opacity"
-                                    title="Cancel appointment"
-                                    disabled={loading}
+                        {appointmentsForDay.map(appt => {
+                            const startTime = new Date(appt.scheduled_start).toLocaleTimeString('en-US', {
+                                hour: 'numeric',
+                                minute: '2-digit'
+                            });
+                            const appointmentTitle = `${startTime} - ${appt.patient_name}`;
+
+                            return (
+                                <div
+                                    key={appt.id}
+                                    className={`p-1 rounded-md flex items-center justify-between group ${
+                                        appt.status === 'cancelled'
+                                            ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 line-through'
+                                            : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300'
+                                    }`}
+                                    title={`${appt.appointment_type} - ${appt.status}`}
                                 >
-                                    <X className="w-3 h-3 text-red-600 dark:text-red-400" />
-                                </button>
-                            </div>
-                        ))}
+                                    <span className="truncate flex-1">{appointmentTitle}</span>
+                                    {appt.status !== 'cancelled' && (
+                                        <button
+                                            onClick={(evt) => {
+                                                evt.stopPropagation();
+                                                handleCancelAppointment(appt.id, appointmentTitle);
+                                            }}
+                                            className="opacity-0 group-hover:opacity-100 ml-1 p-0.5 hover:bg-red-200 dark:hover:bg-red-800 rounded transition-opacity"
+                                            title="Cancel appointment"
+                                            disabled={cancelling || loading}
+                                        >
+                                            <X className="w-3 h-3 text-red-600 dark:text-red-400" />
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             );
@@ -105,59 +125,55 @@ const ProviderSchedule: React.FC<ProviderScheduleProps> = ({ provider }) => {
 
     const monthYearFormat = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long' });
 
-    if (initError) {
+    if (loading) {
         return (
             <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow space-y-4">
-                <div className="bg-red-100 dark:bg-red-900/40 border-l-4 border-red-500 text-red-700 dark:text-red-200 p-4" role="alert">
-                    <p className="font-bold">Calendar Unavailable</p>
-                    <p className="text-sm">Could not connect to Google Calendar services. The administrator needs to configure the API key.</p>
+                <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+                    <p className="ml-4 text-gray-600 dark:text-gray-400">Loading your schedule...</p>
                 </div>
             </div>
         );
     }
 
-    if (!isGapiLoaded || !isGisLoaded) {
-        return <div className="flex items-center justify-center h-full"><p className="dark:text-gray-300">Loading Google API...</p></div>;
-    }
-
     return (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow space-y-4">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">My Schedule</h2>
-                {isSignedIn ? (
-                    <button onClick={signOut} className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 dark:hover:bg-red-800/50">
-                        <LogOut className="w-5 h-5" /> Disconnect Calendar
-                    </button>
-                ) : (
-                    <button onClick={signIn} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600">
-                        <Google className="w-5 h-5 bg-white rounded-full" /> Connect Google Calendar
-                    </button>
-                )}
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                    <CalendarIcon className="w-7 h-7 text-indigo-500" />
+                    My Schedule
+                </h2>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {appointments.length} {appointments.length === 1 ? 'appointment' : 'appointments'}
+                </div>
             </div>
 
-            {isSignedIn ? (
-                <>
-                    <div className="flex justify-between items-center">
-                        <button onClick={handlePrevMonth} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"><ChevronLeft className="dark:text-gray-200" /></button>
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">{monthYearFormat.format(currentDate)}</h3>
-                        <button onClick={handleNextMonth} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"><ChevronRight className="dark:text-gray-200" /></button>
-                    </div>
-                    <div className="border-t border-l dark:border-slate-700">
-                         <div className="grid grid-cols-7 text-center font-bold text-gray-600 dark:text-gray-400">
-                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                                <div key={day} className="py-2 border-r border-b dark:border-slate-700">{day}</div>
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-7">
-                            {renderCalendar()}
-                        </div>
-                    </div>
-                </>
-            ) : (
-                <div className="text-center py-12 border-dashed border-2 dark:border-slate-600 rounded-lg">
+            <div className="flex justify-between items-center">
+                <button onClick={handlePrevMonth} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700">
+                    <ChevronLeft className="dark:text-gray-200" />
+                </button>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">{monthYearFormat.format(currentDate)}</h3>
+                <button onClick={handleNextMonth} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700">
+                    <ChevronRight className="dark:text-gray-200" />
+                </button>
+            </div>
+
+            <div className="border-t border-l dark:border-slate-700">
+                <div className="grid grid-cols-7 text-center font-bold text-gray-600 dark:text-gray-400">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                        <div key={day} className="py-2 border-r border-b dark:border-slate-700">{day}</div>
+                    ))}
+                </div>
+                <div className="grid grid-cols-7">
+                    {renderCalendar()}
+                </div>
+            </div>
+
+            {appointments.length === 0 && (
+                <div className="text-center py-6 border-dashed border-2 dark:border-slate-600 rounded-lg mt-4">
                     <ClipboardCheck className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                    <h3 className="font-semibold text-gray-700 dark:text-gray-300">Connect your calendar to get started</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">View your appointments and manage your schedule in one place.</p>
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300">No appointments scheduled</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Your patients can book appointments with you.</p>
                 </div>
             )}
         </div>
