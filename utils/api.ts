@@ -380,9 +380,30 @@ export const appointmentApi = {
   },
 };
 
+// ===== Mentor API =====
+
+export const mentorApi = {
+  getCurrent: async () => {
+    return fetchWithAuth<any>('/mentors/me');
+  },
+
+  getMentees: async () => {
+    return fetchWithAuth<any>('/mentors/mentees');
+  },
+
+  getStatistics: async () => {
+    return fetchWithAuth<any>('/mentors/statistics');
+  },
+
+  getMenteeDetails: async (menteeId: number) => {
+    return fetchWithAuth<any>(`/mentors/mentees/${menteeId}`);
+  },
+};
+
 export default {
   auth: authApi,
   providers: providerApi,
   patients: patientApi,
   appointments: appointmentApi,
+  mentors: mentorApi,
 };

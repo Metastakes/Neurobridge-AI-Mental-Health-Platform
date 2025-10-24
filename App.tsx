@@ -5,7 +5,7 @@ import ErrorBoundary from './components/ErrorBoundary.tsx';
 import LoginScreen from './components/LoginScreen.tsx';
 import PatientAppWrapper from './components/PatientAppWrapper.tsx';
 import ProviderDashboardWrapper from './components/ProviderDashboardWrapper.tsx';
-import MentorDashboard from './components/MentorDashboard.tsx';
+import MentorDashboardWrapper from './components/MentorDashboardWrapper.tsx';
 import HIPAADisclaimerModal from './components/HIPAADisclaimerModal.tsx';
 import { initialChatHistories } from './userData.ts';
 import { User, ChatMessage } from './types.ts';
@@ -168,13 +168,14 @@ function App() {
             />
           );
         case 'mentor':
-            return <MentorDashboard
-                    mentor={currentUser as any}
-                    mentees={[]}
-                    onLogout={handleLogout}
-                    chats={chats}
-                    onSendMessage={handleSendMessage}
-                   />;
+          return (
+            <MentorDashboardWrapper
+              currentUser={currentUser}
+              onLogout={handleLogout}
+              chats={chats}
+              onSendMessage={handleSendMessage}
+            />
+          );
         default:
           return <div>Unknown user role.</div>;
       }
