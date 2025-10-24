@@ -1317,6 +1317,188 @@ curl -X PUT http://localhost:3001/api/providers/1 \
 
 ---
 
+## Mentor Endpoints
+
+All mentor endpoints require authentication and mentor role.
+
+### 33. Get Current Mentor Profile
+
+Get the profile of the currently authenticated mentor.
+
+**Endpoint:** `GET /mentors/me`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Role Required:** `mentor`
+
+**Success Response:** `200 OK`
+```json
+{
+  "mentor": {
+    "id": 1,
+    "name": "Dr. Robert Thompson",
+    "email": "mentor.thompson@neuro.io",
+    "phone": "+1-555-0107"
+  }
+}
+```
+
+---
+
+### 34. Get Mentees List
+
+Get a list of all providers mentored by the current mentor.
+
+**Endpoint:** `GET /mentors/mentees`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Role Required:** `mentor`
+
+**Success Response:** `200 OK`
+```json
+{
+  "mentees": [
+    {
+      "id": 1,
+      "name": "Dr. Sarah Evans",
+      "email": "dr.evans@neuro.io",
+      "specialty": "Clinical Psychology",
+      "patient_count": 3
+    },
+    {
+      "id": 2,
+      "name": "Dr. Michael Martinez",
+      "email": "dr.martinez@neuro.io",
+      "specialty": "Psychiatry",
+      "patient_count": 5
+    }
+  ],
+  "count": 2
+}
+```
+
+---
+
+### 35. Get Mentor Statistics
+
+Get statistics for the current mentor, including total mentees and supervised patients.
+
+**Endpoint:** `GET /mentors/statistics`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Role Required:** `mentor`
+
+**Success Response:** `200 OK`
+```json
+{
+  "statistics": {
+    "total_mentees": 2,
+    "total_patients_supervised": 8,
+    "total_appointments_supervised": 45,
+    "completed_appointments": 38
+  }
+}
+```
+
+---
+
+### 36. Get Mentee Details
+
+Get detailed information about a specific mentee, including their patients and recent appointments.
+
+**Endpoint:** `GET /mentors/mentees/:menteeId`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Role Required:** `mentor`
+
+**Authorization:** Mentor can only view their assigned mentees.
+
+**Success Response:** `200 OK`
+```json
+{
+  "mentee": {
+    "id": 1,
+    "name": "Dr. Sarah Evans",
+    "email": "dr.evans@neuro.io",
+    "specialty": "Clinical Psychology",
+    "bio": "Experienced clinical psychologist",
+    "license_number": "PSY-CA-12345"
+  },
+  "patients": [
+    {
+      "id": 1,
+      "name": "Alex Johnson",
+      "email": "alex.patient@neuro.io",
+      "diagnosis": "Anxiety Disorder"
+    }
+  ],
+  "recent_appointments": [
+    {
+      "id": 1,
+      "appointment_type": "therapy_session",
+      "scheduled_start": "2024-10-25T14:00:00Z",
+      "scheduled_end": "2024-10-25T15:00:00Z",
+      "status": "completed",
+      "patient_name": "Alex Johnson"
+    }
+  ]
+}
+```
+
+**Error Response:** `404 Not Found`
+```json
+{
+  "error": "Mentee not found or not associated with this mentor"
+}
+```
+
+---
+
+## curl Examples
+
+### Mentor Endpoints:
+
+#### Get Current Mentor Profile:
+```bash
+curl -X GET http://localhost:3001/api/mentors/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+#### Get Mentees List:
+```bash
+curl -X GET http://localhost:3001/api/mentors/mentees \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+#### Get Mentor Statistics:
+```bash
+curl -X GET http://localhost:3001/api/mentors/statistics \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+#### Get Mentee Details:
+```bash
+curl -X GET http://localhost:3001/api/mentors/mentees/1 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+---
+
 ## Next Steps
 
 ### Implement:

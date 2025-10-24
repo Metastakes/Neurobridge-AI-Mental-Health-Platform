@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.routes.js';
 import patientRoutes from './routes/patient.routes.js';
 import appointmentRoutes from './routes/appointment.routes.js';
 import providerRoutes from './routes/provider.routes.js';
+import mentorRoutes from './routes/mentor.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -80,6 +81,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/providers', providerRoutes);
+app.use('/api/mentors', mentorRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
