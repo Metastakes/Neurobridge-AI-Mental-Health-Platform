@@ -1,6 +1,6 @@
 // hooks/useProviders.ts
 import { useState, useEffect, useCallback } from 'react';
-import { providerApi } from '../utils/api';
+import { providerApi, patientApi } from '../utils/api';
 
 export interface Provider {
   id: number;
@@ -15,6 +15,16 @@ export interface Provider {
   education: string | null;
   certifications: string | null;
   license_number: string | null;
+}
+
+export interface ProviderPatient {
+  id: number;
+  user_id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  date_of_birth: string | null;
+  provider_id: number | null;
 }
 
 interface UseProvidersResult {
@@ -138,5 +148,77 @@ export function useProvider(id: number | null) {
     loading,
     error,
     refetch: fetchProvider,
+  };
+}
+
+export function useCurrentProvider() {
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProvider = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await providerApi.getCurrent();
+
+      if (response.data?.provider) {
+        setProvider(response.data.provider);
+      } else if (response.error) {
+        setError(response.error);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch provider data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProvider();
+  }, [fetchProvider]);
+
+  return {
+    provider,
+    loading,
+    error,
+    refetch: fetchProvider,
+  };
+}
+
+export function useProviderPatients() {
+  const [patients, setPatients] = useState<ProviderPatient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPatients = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await patientApi.getProviderPatients();
+
+      if (response.data?.patients) {
+        setPatients(response.data.patients);
+      } else if (response.error) {
+        setError(response.error);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch provider patients');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
+
+  return {
+    patients,
+    loading,
+    error,
+    refetch: fetchPatients,
   };
 }

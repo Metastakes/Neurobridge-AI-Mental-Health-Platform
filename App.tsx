@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import LoginScreen from './components/LoginScreen.tsx';
 import PatientAppWrapper from './components/PatientAppWrapper.tsx';
-import ProviderDashboard from './components/ProviderDashboard.tsx';
+import ProviderDashboardWrapper from './components/ProviderDashboardWrapper.tsx';
 import MentorDashboard from './components/MentorDashboard.tsx';
 import HIPAADisclaimerModal from './components/HIPAADisclaimerModal.tsx';
 import { initialChatHistories } from './userData.ts';
@@ -159,13 +159,14 @@ function App() {
             />
           );
         case 'provider':
-          return <ProviderDashboard
-                    provider={currentUser as any}
-                    patients={[]}
-                    onLogout={handleLogout}
-                    chats={chats}
-                    onSendMessage={handleSendMessage}
-                 />;
+          return (
+            <ProviderDashboardWrapper
+              currentUser={currentUser}
+              onLogout={handleLogout}
+              chats={chats}
+              onSendMessage={handleSendMessage}
+            />
+          );
         case 'mentor':
             return <MentorDashboard
                     mentor={currentUser as any}
