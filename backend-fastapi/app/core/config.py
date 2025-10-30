@@ -1,20 +1,33 @@
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
+from typing import List
 
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "NeuroBridge"
+    DEBUG: bool = False
+
     DATABASE_URL: str = "postgresql://neurobridge:password@localhost:5432/neurobridge"
     REDIS_URL: str = "redis://localhost:6379/0"
+
     SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
+
     STRIPE_API_KEY: str = ""
-    SQUARE_ACCESS_TOKEN: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_PHONE_NUMBER: str = ""
+
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_REGION: str = "us-east-1"
+    AWS_SES_FROM_EMAIL: str = ""
+
+    FRONTEND_URL: str = "http://localhost:3000"
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
 
     @field_validator('SECRET_KEY')
     def validate_secret_key(cls, v):
