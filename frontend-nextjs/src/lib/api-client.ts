@@ -425,7 +425,7 @@ class ApiClient {
     return response.data.slots
   }
 
-  async bookAppointment(request: BookAppointmentRequest): Promise<any> {
+  async bookAppointmentFromSlot(request: BookAppointmentRequest): Promise<any> {
     const response = await this.client.post('/booking/book', request)
     return response.data
   }

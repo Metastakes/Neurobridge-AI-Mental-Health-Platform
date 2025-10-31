@@ -276,7 +276,7 @@ export default function FindProvider() {
               </Button>
               <span className="text-sm text-gray-600">
                 Page {currentPage} of {totalPages}
-              </Button>
+              </span>
               <Button
                 variant="outline"
                 size="sm"

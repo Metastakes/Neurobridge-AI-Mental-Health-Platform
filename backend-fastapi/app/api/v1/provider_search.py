@@ -42,9 +42,11 @@ def search_providers(
 
     # Apply filters
     if filters.specialty_ids:
-        # Match any of the selected specialties
+        # Match any of the selected specialties using overlap operator
+        # Provider must have at least one of the requested specialties
+        from sqlalchemy.dialects.postgresql import ARRAY
         query = query.filter(
-            ProviderProfile.specialty_ids.op('@>')(func.cast(filters.specialty_ids, type_=type(ProviderProfile.specialty_ids)))
+            ProviderProfile.specialty_ids.op('&&')(filters.specialty_ids)
         )
 
     if filters.accepts_new_patients is not None:
