@@ -34,5 +34,8 @@ class Provider(Base):
     # FIX #1 APPLIED: Correct relationship to User model
     user = relationship("User", backref="provider_profile", foreign_keys=[user_id])
 
+    # Phase 3 relationships
+    profile = relationship("ProviderProfile", back_populates="provider", uselist=False)
+
     def __repr__(self):
         return f"<Provider(id={self.id}, user_id={self.user_id}, type={self.provider_type})>"

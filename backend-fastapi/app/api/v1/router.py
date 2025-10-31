@@ -11,6 +11,9 @@ from app.api.v1 import (
     provider_documents,
     specialties,
     provider_availability,
+    provider_search,
+    appointment_booking,
+    patient_intake,
 )
 
 api_router = APIRouter()
@@ -28,6 +31,11 @@ api_router.include_router(referrals.router, prefix="/referrals", tags=["Referral
 api_router.include_router(provider_application.router, prefix="/provider", tags=["Provider Onboarding"])
 api_router.include_router(provider_documents.router, prefix="/provider", tags=["Provider Documents"])
 api_router.include_router(provider_availability.router, prefix="/provider", tags=["Provider Availability"])
+
+# Patient intake & scheduling routes (Phase 3)
+api_router.include_router(provider_search.router, prefix="/search", tags=["Provider Search"])
+api_router.include_router(appointment_booking.router, prefix="/booking", tags=["Appointment Booking"])
+api_router.include_router(patient_intake.router, prefix="/patient", tags=["Patient Intake"])
 
 # Reference data routes
 api_router.include_router(specialties.router, tags=["Reference Data"])

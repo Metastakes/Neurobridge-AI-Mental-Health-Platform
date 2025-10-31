@@ -27,6 +27,11 @@ from app.models.provider_document import ProviderDocument, DocumentType, Documen
 from app.models.provider_availability import ProviderAvailability, ProviderTimeOff
 from app.models.specialty import Specialty, InsurancePlan
 
+# Phase 3: Patient Intake & Scheduling
+from app.models.patient_intake_form import PatientIntakeForm, IntakeFormStatus
+from app.models.provider_profile import ProviderProfile
+from app.models.appointment_slot import AppointmentSlot
+
 __all__ = [
     # Enums
     "UserRole",
@@ -62,4 +67,9 @@ __all__ = [
     "ProviderTimeOff",
     "Specialty",
     "InsurancePlan",
+    # Phase 3 Models
+    "PatientIntakeForm",
+    "IntakeFormStatus",
+    "ProviderProfile",
+    "AppointmentSlot",
 ]

@@ -29,5 +29,8 @@ class Patient(Base):
     user = relationship("User", backref="patient_profile", foreign_keys=[user_id])
     assigned_provider = relationship("User", backref="assigned_patients", foreign_keys=[provider_id])
 
+    # Phase 3 relationships
+    intake_forms = relationship("PatientIntakeForm", back_populates="patient")
+
     def __repr__(self):
         return f"<Patient(id={self.id}, user_id={self.user_id})>"
