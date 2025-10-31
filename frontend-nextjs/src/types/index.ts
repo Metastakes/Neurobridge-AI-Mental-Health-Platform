@@ -406,3 +406,164 @@ export interface ProviderTimeOff {
   is_all_day: boolean
   created_at: string
 }
+
+// Phase 3: Patient Intake & Scheduling Interfaces
+
+export interface MedicationItem {
+  name: string
+  dosage: string
+  frequency: string
+}
+
+export interface PatientIntakeForm {
+  id: number
+  patient_id: number
+  status: string
+
+  // Demographics
+  preferred_name: string | null
+  preferred_pronouns: string | null
+
+  // Emergency Contact
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  emergency_contact_relationship: string | null
+
+  // Insurance
+  insurance_provider: string | null
+  insurance_policy_number: string | null
+  insurance_group_number: string | null
+  insurance_subscriber_name: string | null
+  insurance_subscriber_relationship: string | null
+  insurance_subscriber_dob: string | null
+
+  // Medical History
+  primary_care_physician: string | null
+  pcp_phone: string | null
+  current_medications: MedicationItem[] | null
+  medication_allergies: string | null
+
+  // Mental Health History
+  previous_mental_health_treatment: boolean | null
+  previous_therapist_name: string | null
+  previous_treatment_dates: string | null
+  previous_psychiatric_medications: string | null
+  previous_hospitalizations: string | null
+  family_mental_health_history: string | null
+
+  // Current Symptoms
+  primary_concerns: string[] | null
+  symptom_duration: string | null
+  symptom_severity: number | null
+
+  // Screening
+  phq9_score: number | null
+  gad7_score: number | null
+
+  // Safety
+  current_suicidal_ideation: boolean
+  suicide_plan: boolean
+  suicide_attempt_history: boolean
+  suicide_attempt_details: string | null
+  self_harm_history: boolean
+  self_harm_details: string | null
+
+  // Substance Use
+  alcohol_use: string | null
+  substance_use: string | null
+  tobacco_use: boolean | null
+
+  // Goals
+  treatment_goals: string | null
+  preferred_appointment_times: string[] | null
+  session_frequency_preference: string | null
+
+  // Consents
+  consent_to_treatment: boolean
+  consent_to_telehealth: boolean
+  hipaa_acknowledgment: boolean
+
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface IntakeFormCreate {
+  preferred_name?: string
+  preferred_pronouns?: string
+  emergency_contact_name?: string
+  emergency_contact_phone?: string
+  emergency_contact_relationship?: string
+  insurance_provider?: string
+  insurance_policy_number?: string
+  insurance_group_number?: string
+  primary_care_physician?: string
+  current_medications?: MedicationItem[]
+  primary_concerns?: string[]
+  phq9_score?: number
+  gad7_score?: number
+  treatment_goals?: string
+  consent_to_treatment?: boolean
+  consent_to_telehealth?: boolean
+  hipaa_acknowledgment?: boolean
+}
+
+export interface ProviderSearchResult {
+  provider_id: number
+  user_id: number
+  name: string
+  provider_type: string
+  specialty: string | null
+  years_experience: number | null
+  languages_spoken: string[] | null
+  bio: string | null
+  profile_photo_url: string | null
+  accepts_new_patients: boolean
+  earliest_availability_date: string | null
+  session_duration_minutes: number
+  accepts_medicare: boolean
+  accepts_medicaid: boolean
+  accepts_self_pay: boolean
+  insurance_plans_count: number
+  rating_average: number | null
+  rating_count: number
+}
+
+export interface ProviderSearchFilters {
+  specialty_ids?: number[]
+  insurance_plan_id?: number
+  accepts_medicare?: boolean
+  accepts_medicaid?: boolean
+  state?: string
+  languages?: string[]
+  sort_by?: string
+  skip?: number
+  limit?: number
+}
+
+export interface ProviderSearchResponse {
+  results: ProviderSearchResult[]
+  total_count: number
+  page_size: number
+  page_number: number
+  total_pages: number
+}
+
+export interface AppointmentSlot {
+  id: number
+  provider_id: number
+  start_time: string
+  end_time: string
+  timezone: string
+  slot_type: string | null
+  is_telehealth: boolean
+}
+
+export interface BookAppointmentRequest {
+  slot_id: number
+  appointment_type: string
+  payment_type: string
+  insurance_provider?: string
+  insurance_policy_number?: string
+  notes?: string
+}

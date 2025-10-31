@@ -27,6 +27,12 @@ import type {
   ProviderAvailability,
   ProviderAvailabilitySlot,
   ProviderTimeOff,
+  PatientIntakeForm,
+  IntakeFormCreate,
+  ProviderSearchFilters,
+  ProviderSearchResponse,
+  AppointmentSlot,
+  BookAppointmentRequest,
 } from '@/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -376,6 +382,99 @@ class ApiClient {
 
   async deleteTimeOff(timeOffId: number): Promise<void> {
     await this.client.delete(`/provider/time-off/${timeOffId}`)
+  }
+
+  // Phase 3: Patient Intake & Scheduling endpoints
+
+  // Provider Search
+  async searchProviders(filters: ProviderSearchFilters): Promise<ProviderSearchResponse> {
+    const response = await this.client.post<ProviderSearchResponse>('/search/search', filters)
+    return response.data
+  }
+
+  async getProviderDetail(providerId: number): Promise<any> {
+    const response = await this.client.get(`/search/providers/${providerId}`)
+    return response.data
+  }
+
+  async getSpecialtiesForSearch(): Promise<Specialty[]> {
+    const response = await this.client.get<Specialty[]>('/search/specialties-list')
+    return response.data
+  }
+
+  async getInsurancePlansForSearch(state?: string): Promise<InsurancePlan[]> {
+    const params = state ? { state } : {}
+    const response = await this.client.get<InsurancePlan[]>('/search/insurance-plans-list', { params })
+    return response.data
+  }
+
+  // Appointment Booking
+  async getAvailableSlots(
+    providerId: number,
+    startDate: string,
+    endDate: string
+  ): Promise<AppointmentSlot[]> {
+    const response = await this.client.post<{ slots: AppointmentSlot[] }>(
+      '/booking/available-slots',
+      {
+        provider_id: providerId,
+        start_date: startDate,
+        end_date: endDate,
+      }
+    )
+    return response.data.slots
+  }
+
+  async bookAppointment(request: BookAppointmentRequest): Promise<any> {
+    const response = await this.client.post('/booking/book', request)
+    return response.data
+  }
+
+  async rescheduleAppointment(appointmentId: number, newSlotId: number): Promise<any> {
+    const response = await this.client.post(`/booking/appointments/${appointmentId}/reschedule`, {
+      new_slot_id: newSlotId,
+    })
+    return response.data
+  }
+
+  async cancelAppointmentBooking(appointmentId: number, reason?: string): Promise<any> {
+    const response = await this.client.post(`/booking/appointments/${appointmentId}/cancel`, {
+      reason,
+    })
+    return response.data
+  }
+
+  // Patient Intake
+  async createIntakeForm(formData: IntakeFormCreate): Promise<PatientIntakeForm> {
+    const response = await this.client.post<PatientIntakeForm>('/patient/intake-form', formData)
+    return response.data
+  }
+
+  async getMyIntakeForm(): Promise<PatientIntakeForm> {
+    const response = await this.client.get<PatientIntakeForm>('/patient/intake-form')
+    return response.data
+  }
+
+  async updateIntakeForm(formId: number, formData: Partial<IntakeFormCreate>): Promise<PatientIntakeForm> {
+    const response = await this.client.put<PatientIntakeForm>(`/patient/intake-form/${formId}`, formData)
+    return response.data
+  }
+
+  async submitIntakeForm(formId: number): Promise<PatientIntakeForm> {
+    const response = await this.client.post<PatientIntakeForm>(`/patient/intake-form/${formId}/submit`)
+    return response.data
+  }
+
+  async getIntakeFormStatus(formId: number): Promise<{
+    form_id: number
+    status: string
+    completion_percentage: number
+    required_fields_complete: boolean
+    missing_required_fields: string[]
+    can_submit: boolean
+  }> {
+    const response = await this.client.get(`/patient/intake-form/${formId}/completion-status`)
+    return response.data
   }
 }
 
