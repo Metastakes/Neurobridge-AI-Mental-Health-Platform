@@ -15,6 +15,18 @@ import type {
   Referral,
   ReferralCreateRequest,
   EarningsDashboard,
+  ProviderApplication,
+  ProviderApplicationCreate,
+  ProviderApplicationUpdate,
+  ApplicationStatusResponse,
+  Specialty,
+  InsurancePlan,
+  ProviderDocument,
+  DocumentUploadResponse,
+  DocumentType,
+  ProviderAvailability,
+  ProviderAvailabilitySlot,
+  ProviderTimeOff,
 } from '@/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -228,6 +240,142 @@ class ApiClient {
       params: { period_days: periodDays },
     })
     return response.data
+  }
+
+  // Phase 2: Provider Onboarding endpoints
+
+  // Provider Applications
+  async createProviderApplication(data: ProviderApplicationCreate): Promise<ProviderApplication> {
+    const response = await this.client.post<ProviderApplication>('/provider/application', data)
+    return response.data
+  }
+
+  async getMyProviderApplication(): Promise<ProviderApplication> {
+    const response = await this.client.get<ProviderApplication>('/provider/application')
+    return response.data
+  }
+
+  async updateProviderApplication(
+    applicationId: number,
+    data: ProviderApplicationUpdate
+  ): Promise<ProviderApplication> {
+    const response = await this.client.put<ProviderApplication>(
+      `/provider/application/${applicationId}`,
+      data
+    )
+    return response.data
+  }
+
+  async submitProviderApplication(applicationId: number): Promise<ProviderApplication> {
+    const response = await this.client.post<ProviderApplication>(
+      `/provider/application/${applicationId}/submit`
+    )
+    return response.data
+  }
+
+  async getApplicationStatus(applicationId: number): Promise<ApplicationStatusResponse> {
+    const response = await this.client.get<ApplicationStatusResponse>(
+      `/provider/application/${applicationId}/status`
+    )
+    return response.data
+  }
+
+  // Specialties & Insurance
+  async getSpecialties(category?: string): Promise<Specialty[]> {
+    const params = category ? { category } : {}
+    const response = await this.client.get<Specialty[]>('/specialties', { params })
+    return response.data
+  }
+
+  async getInsurancePlans(state?: string): Promise<InsurancePlan[]> {
+    const params = state ? { state } : {}
+    const response = await this.client.get<InsurancePlan[]>('/insurance-plans', { params })
+    return response.data
+  }
+
+  async getInsurancePlan(planId: number): Promise<InsurancePlan> {
+    const response = await this.client.get<InsurancePlan>(`/insurance-plans/${planId}`)
+    return response.data
+  }
+
+  // Provider Documents
+  async uploadProviderDocument(
+    documentType: DocumentType,
+    file: File
+  ): Promise<DocumentUploadResponse> {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('document_type', documentType)
+
+    const response = await this.client.post<DocumentUploadResponse>('/provider/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data
+  }
+
+  async getMyProviderDocuments(): Promise<ProviderDocument[]> {
+    const response = await this.client.get<ProviderDocument[]>('/provider/documents')
+    return response.data
+  }
+
+  async getDocumentDownloadUrl(documentId: number): Promise<{ download_url: string }> {
+    const response = await this.client.get<{ download_url: string }>(
+      `/provider/documents/${documentId}/download`
+    )
+    return response.data
+  }
+
+  async deleteProviderDocument(documentId: number): Promise<void> {
+    await this.client.delete(`/provider/documents/${documentId}`)
+  }
+
+  // Provider Availability
+  async createAvailabilitySlot(data: ProviderAvailabilitySlot): Promise<ProviderAvailability> {
+    const response = await this.client.post<ProviderAvailability>('/provider/availability', data)
+    return response.data
+  }
+
+  async getMyAvailability(): Promise<ProviderAvailability[]> {
+    const response = await this.client.get<ProviderAvailability[]>('/provider/availability')
+    return response.data
+  }
+
+  async setWeeklyAvailability(
+    slots: ProviderAvailabilitySlot[]
+  ): Promise<{ message: string; slots_created: number }> {
+    const response = await this.client.post<{ message: string; slots_created: number }>(
+      '/provider/availability/bulk',
+      { availability_slots: slots }
+    )
+    return response.data
+  }
+
+  async deleteAvailabilitySlot(slotId: number): Promise<void> {
+    await this.client.delete(`/provider/availability/${slotId}`)
+  }
+
+  // Provider Time Off
+  async createTimeOff(data: {
+    start_date: string
+    end_date: string
+    reason?: string
+    is_all_day?: boolean
+  }): Promise<ProviderTimeOff> {
+    const response = await this.client.post<ProviderTimeOff>('/provider/time-off', data)
+    return response.data
+  }
+
+  async getMyTimeOff(upcomingOnly: boolean = true): Promise<ProviderTimeOff[]> {
+    const response = await this.client.get<ProviderTimeOff[]>('/provider/time-off', {
+      params: { upcoming_only: upcomingOnly },
+    })
+    return response.data
+  }
+
+  async deleteTimeOff(timeOffId: number): Promise<void> {
+    await this.client.delete(`/provider/time-off/${timeOffId}`)
   }
 }
 

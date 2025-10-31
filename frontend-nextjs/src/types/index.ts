@@ -17,6 +17,34 @@ export type QuizStatus = 'PASSED' | 'FAILED'
 
 export type ReferralStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED'
 
+// Phase 2: Provider Onboarding Types
+export type ApplicationStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'DOCUMENTS_PENDING'
+  | 'CAQH_VERIFICATION'
+  | 'BACKGROUND_CHECK'
+  | 'APPROVED'
+  | 'REJECTED'
+
+export type DocumentType =
+  | 'DEA_CERTIFICATE'
+  | 'STATE_LICENSE'
+  | 'MALPRACTICE_INSURANCE'
+  | 'CV_RESUME'
+  | 'BOARD_CERTIFICATION'
+  | 'W9_TAX_FORM'
+  | 'HIPAA_TRAINING'
+  | 'OTHER'
+
+export type DocumentStatus =
+  | 'UPLOADED'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'EXPIRED'
+
 export interface User {
   id: number
   email: string
@@ -202,4 +230,179 @@ export interface ReferralCreateRequest {
   to_provider_type: ProviderType
   reason: string
   clinical_notes?: string
+}
+
+// Phase 2: Provider Onboarding Interfaces
+
+export interface Specialty {
+  id: number
+  name: string
+  description: string | null
+  category: string | null
+  keywords: string | null
+  icon: string | null
+  is_active: boolean
+}
+
+export interface InsurancePlan {
+  id: number
+  name: string
+  payer_id: string | null
+  payer_name: string | null
+  plan_type: string | null
+  state_coverage: string | null
+  clearinghouse: string | null
+  requires_auth: boolean
+  logo_url: string | null
+  is_active: boolean
+}
+
+export interface ProviderApplication {
+  id: number
+  user_id: number
+  status: ApplicationStatus
+  current_step: number
+
+  // Step 1: Basic Information
+  first_name: string | null
+  last_name: string | null
+  email: string | null
+  phone: string | null
+  date_of_birth: string | null
+  ssn_last_four: string | null
+
+  // Step 2: Professional Information
+  npi_number: string | null
+  dea_number: string | null
+  provider_type: string | null
+  specialties: number[] | null
+  years_experience: number | null
+
+  // Step 3: Practice Address
+  practice_name: string | null
+  practice_address_line1: string | null
+  practice_address_line2: string | null
+  practice_city: string | null
+  practice_state: string | null
+  practice_zip: string | null
+  practice_phone: string | null
+
+  // Step 4: Insurance & Credentialing
+  insurance_plans: number[] | null
+  accepts_medicare: boolean
+  accepts_medicaid: boolean
+
+  // Step 5: CAQH Credentialing
+  caqh_provider_id: string | null
+  caqh_username: string | null
+  caqh_verified: boolean
+  caqh_last_verified: string | null
+
+  // Step 6: Background Check & Documents
+  background_check_consent: boolean
+  background_check_status: string | null
+  background_check_completed_at: string | null
+  documents_complete: boolean
+
+  // Metadata
+  created_at: string
+  updated_at: string
+  submitted_at: string | null
+}
+
+export interface ProviderApplicationCreate {
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+}
+
+export interface ProviderApplicationUpdate {
+  // All fields optional for partial updates
+  current_step?: number
+  first_name?: string
+  last_name?: string
+  phone?: string
+  date_of_birth?: string
+  ssn_last_four?: string
+  npi_number?: string
+  dea_number?: string
+  provider_type?: string
+  specialties?: number[]
+  years_experience?: number
+  practice_name?: string
+  practice_address_line1?: string
+  practice_address_line2?: string
+  practice_city?: string
+  practice_state?: string
+  practice_zip?: string
+  practice_phone?: string
+  insurance_plans?: number[]
+  accepts_medicare?: boolean
+  accepts_medicaid?: boolean
+  caqh_provider_id?: string
+  caqh_username?: string
+  background_check_consent?: boolean
+  documents_complete?: boolean
+}
+
+export interface ApplicationStatusResponse {
+  application_id: number
+  status: ApplicationStatus
+  current_step: number
+  completion_percentage: number
+  missing_fields: string[]
+  can_submit: boolean
+}
+
+export interface ProviderDocument {
+  id: number
+  provider_id: number
+  document_type: DocumentType
+  document_name: string
+  description: string | null
+  file_size: number | null
+  file_type: string | null
+  status: DocumentStatus
+  expiration_date: string | null
+  requires_renewal: number
+  uploaded_at: string
+  reviewed_at: string | null
+  rejection_reason: string | null
+}
+
+export interface DocumentUploadResponse {
+  document_id: number
+  document_type: DocumentType
+  file_name: string
+  file_size: number
+  s3_key: string
+  status: DocumentStatus
+  uploaded_at: string
+}
+
+export interface ProviderAvailabilitySlot {
+  day_of_week: number // 0=Monday, 6=Sunday
+  start_time: string // HH:MM format
+  end_time: string // HH:MM format
+  timezone?: string
+  is_recurring?: boolean
+  allowed_appointment_types?: string[]
+}
+
+export interface ProviderAvailability extends ProviderAvailabilitySlot {
+  id: number
+  provider_id: number
+  is_available: boolean
+  override_date: string | null
+}
+
+export interface ProviderTimeOff {
+  id: number
+  provider_id: number
+  start_date: string
+  end_date: string
+  reason: string | null
+  is_all_day: boolean
+  created_at: string
 }
