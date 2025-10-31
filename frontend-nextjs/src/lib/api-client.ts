@@ -33,6 +33,12 @@ import type {
   ProviderSearchResponse,
   AppointmentSlot,
   BookAppointmentRequest,
+  VideoSession,
+  SessionJoinResponse,
+  SessionStatusUpdate,
+  SessionNote,
+  SessionNoteCreate,
+  WaitingRoomEntry,
 } from '@/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -474,6 +480,42 @@ class ApiClient {
     can_submit: boolean
   }> {
     const response = await this.client.get(`/patient/intake-form/${formId}/completion-status`)
+    return response.data
+  }
+
+  // Phase 4: Video Sessions
+  async getVideoSessionForAppointment(appointmentId: number): Promise<VideoSession> {
+    const response = await this.client.get<VideoSession>(`/video-sessions/appointment/${appointmentId}`)
+    return response.data
+  }
+
+  async joinVideoSession(videoSessionId: number): Promise<SessionJoinResponse> {
+    const response = await this.client.post<SessionJoinResponse>(`/video-sessions/join/${videoSessionId}`)
+    return response.data
+  }
+
+  async updateSessionStatus(videoSessionId: number, statusUpdate: SessionStatusUpdate): Promise<any> {
+    const response = await this.client.post(`/video-sessions/${videoSessionId}/status`, statusUpdate)
+    return response.data
+  }
+
+  async createSessionNote(videoSessionId: number, noteData: SessionNoteCreate): Promise<SessionNote> {
+    const response = await this.client.post<SessionNote>(`/video-sessions/${videoSessionId}/notes`, noteData)
+    return response.data
+  }
+
+  async getSessionNotes(videoSessionId: number): Promise<SessionNote[]> {
+    const response = await this.client.get<SessionNote[]>(`/video-sessions/${videoSessionId}/notes`)
+    return response.data
+  }
+
+  async getWaitingRoom(videoSessionId: number): Promise<WaitingRoomEntry[]> {
+    const response = await this.client.get<WaitingRoomEntry[]>(`/video-sessions/waiting-room/${videoSessionId}`)
+    return response.data
+  }
+
+  async admitFromWaitingRoom(waitingRoomId: number): Promise<any> {
+    const response = await this.client.post(`/video-sessions/waiting-room/${waitingRoomId}/admit`)
     return response.data
   }
 }

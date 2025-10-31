@@ -32,6 +32,15 @@ from app.models.patient_intake_form import PatientIntakeForm, IntakeFormStatus
 from app.models.provider_profile import ProviderProfile
 from app.models.appointment_slot import AppointmentSlot
 
+# Phase 4: Telehealth Video Integration
+from app.models.video_session import (
+    VideoSession,
+    SessionNote,
+    WaitingRoom,
+    VideoSessionStatus,
+    VideoSessionPlatform,
+)
+
 __all__ = [
     # Enums
     "UserRole",
@@ -72,4 +81,10 @@ __all__ = [
     "IntakeFormStatus",
     "ProviderProfile",
     "AppointmentSlot",
+    # Phase 4 Models
+    "VideoSession",
+    "SessionNote",
+    "WaitingRoom",
+    "VideoSessionStatus",
+    "VideoSessionPlatform",
 ]

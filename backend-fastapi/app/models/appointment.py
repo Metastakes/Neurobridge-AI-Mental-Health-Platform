@@ -36,5 +36,8 @@ class Appointment(Base):
     patient_user = relationship("User", foreign_keys=[patient_id], backref="patient_appointments")
     provider_user = relationship("User", foreign_keys=[provider_id], backref="provider_appointments")
 
+    # Phase 4: Video session relationship (one-to-one)
+    video_session = relationship("VideoSession", back_populates="appointment", uselist=False)
+
     def __repr__(self):
         return f"<Appointment(id={self.id}, patient_id={self.patient_id}, provider_id={self.provider_id}, status={self.status})>"

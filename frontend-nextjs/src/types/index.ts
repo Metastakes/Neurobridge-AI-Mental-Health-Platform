@@ -567,3 +567,86 @@ export interface BookAppointmentRequest {
   insurance_policy_number?: string
   notes?: string
 }
+
+// Phase 4: Telehealth Video Integration Interfaces
+
+export type VideoSessionStatus =
+  | 'SCHEDULED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'NO_SHOW'
+
+export type VideoSessionPlatform =
+  | 'GOOGLE_MEET'
+  | 'ZOOM'
+  | 'CUSTOM'
+
+export interface VideoSession {
+  id: number
+  appointment_id: number
+  platform: VideoSessionPlatform
+  meeting_url: string
+  meeting_id: string | null
+  meeting_password: string | null
+  google_event_id: string | null
+  google_meet_code: string | null
+  scheduled_start_time: string
+  scheduled_duration_minutes: number
+  actual_start_time: string | null
+  actual_end_time: string | null
+  provider_joined_at: string | null
+  patient_joined_at: string | null
+  status: VideoSessionStatus
+  connection_quality: string | null
+  technical_issues: string | null
+  recording_enabled: boolean
+  recording_consent: boolean
+  recording_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SessionJoinResponse {
+  video_session_id: number
+  meeting_url: string
+  meeting_id: string | null
+  meeting_password: string | null
+  status: string
+  can_join: boolean
+  message: string
+  waiting_room_required: boolean
+}
+
+export interface SessionStatusUpdate {
+  status?: VideoSessionStatus
+  connection_quality?: string
+  technical_issues?: string
+}
+
+export interface SessionNote {
+  id: number
+  video_session_id: number
+  provider_id: number
+  note_content: string
+  note_type: string | null
+  note_timestamp: string
+  is_private: boolean
+}
+
+export interface SessionNoteCreate {
+  note_content: string
+  note_type?: string
+  is_private?: boolean
+}
+
+export interface WaitingRoomEntry {
+  id: number
+  video_session_id: number
+  patient_id: number
+  joined_at: string
+  is_waiting: boolean
+  admitted_at: string | null
+  message_to_provider: string | null
+  technical_issue: string | null
+}
