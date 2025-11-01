@@ -41,6 +41,18 @@ from app.models.video_session import (
     VideoSessionPlatform,
 )
 
+# Phase 5: Progress Tracking & Outcomes Measurement
+from app.models.assessment import (
+    AssessmentScale,
+    AssessmentAttempt,
+    TreatmentGoal,
+    GoalProgress,
+    AssessmentType,
+    SeverityLevel,
+    GoalStatus,
+    GoalCategory,
+)
+
 __all__ = [
     # Enums
     "UserRole",
@@ -87,4 +99,13 @@ __all__ = [
     "WaitingRoom",
     "VideoSessionStatus",
     "VideoSessionPlatform",
+    # Phase 5 Models
+    "AssessmentScale",
+    "AssessmentAttempt",
+    "TreatmentGoal",
+    "GoalProgress",
+    "AssessmentType",
+    "SeverityLevel",
+    "GoalStatus",
+    "GoalCategory",
 ]

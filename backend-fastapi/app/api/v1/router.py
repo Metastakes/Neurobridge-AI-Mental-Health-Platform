@@ -15,6 +15,8 @@ from app.api.v1 import (
     appointment_booking,
     patient_intake,
     video_sessions,
+    assessments,
+    treatment_goals,
 )
 
 api_router = APIRouter()
@@ -40,6 +42,10 @@ api_router.include_router(patient_intake.router, prefix="/patient", tags=["Patie
 
 # Telehealth video routes (Phase 4)
 api_router.include_router(video_sessions.router, prefix="/video-sessions", tags=["Video Sessions"])
+
+# Progress tracking routes (Phase 5)
+api_router.include_router(assessments.router, prefix="/assessments", tags=["Assessments"])
+api_router.include_router(treatment_goals.router, prefix="/treatment-goals", tags=["Treatment Goals"])
 
 # Reference data routes
 api_router.include_router(specialties.router, tags=["Reference Data"])
