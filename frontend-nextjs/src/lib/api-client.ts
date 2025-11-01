@@ -39,6 +39,18 @@ import type {
   SessionNote,
   SessionNoteCreate,
   WaitingRoomEntry,
+  AssessmentScale,
+  AssessmentScaleListItem,
+  AssessmentAttemptCreate,
+  AssessmentAttempt,
+  AssessmentScoreHistory,
+  ProgressSummary,
+  TreatmentGoalCreate,
+  TreatmentGoalUpdate,
+  TreatmentGoal,
+  TreatmentGoalWithProgress,
+  GoalProgressCreate,
+  GoalProgress,
 } from '@/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -516,6 +528,83 @@ class ApiClient {
 
   async admitFromWaitingRoom(waitingRoomId: number): Promise<any> {
     const response = await this.client.post(`/video-sessions/waiting-room/${waitingRoomId}/admit`)
+    return response.data
+  }
+
+  // Phase 5: Assessments & Progress Tracking
+  async listAssessmentScales(scaleType?: string, activeOnly: boolean = true): Promise<AssessmentScaleListItem[]> {
+    const params: any = {}
+    if (scaleType) params.scale_type = scaleType
+    if (activeOnly) params.active_only = true
+    const response = await this.client.get<AssessmentScaleListItem[]>('/assessments/scales', { params })
+    return response.data
+  }
+
+  async getAssessmentScale(scaleId: number): Promise<AssessmentScale> {
+    const response = await this.client.get<AssessmentScale>(`/assessments/scales/${scaleId}`)
+    return response.data
+  }
+
+  async submitAssessment(attemptData: AssessmentAttemptCreate): Promise<AssessmentAttempt> {
+    const response = await this.client.post<AssessmentAttempt>('/assessments/attempts', attemptData)
+    return response.data
+  }
+
+  async getAssessmentAttempt(attemptId: number): Promise<AssessmentAttempt> {
+    const response = await this.client.get<AssessmentAttempt>(`/assessments/attempts/${attemptId}`)
+    return response.data
+  }
+
+  async listPatientAssessments(patientId: number, scaleCode?: string, limit: number = 50): Promise<AssessmentAttempt[]> {
+    const params: any = { limit }
+    if (scaleCode) params.scale_code = scaleCode
+    const response = await this.client.get<AssessmentAttempt[]>(`/assessments/patient/${patientId}/attempts`, { params })
+    return response.data
+  }
+
+  async getAssessmentHistory(patientId: number, scaleCode: string): Promise<AssessmentScoreHistory> {
+    const response = await this.client.get<AssessmentScoreHistory>(`/assessments/patient/${patientId}/history/${scaleCode}`)
+    return response.data
+  }
+
+  async getPatientProgressSummary(patientId: number): Promise<ProgressSummary> {
+    const response = await this.client.get<ProgressSummary>(`/assessments/patient/${patientId}/progress`)
+    return response.data
+  }
+
+  // Treatment Goals
+  async createTreatmentGoal(goalData: TreatmentGoalCreate): Promise<TreatmentGoal> {
+    const response = await this.client.post<TreatmentGoal>('/treatment-goals/', goalData)
+    return response.data
+  }
+
+  async getTreatmentGoal(goalId: number): Promise<TreatmentGoalWithProgress> {
+    const response = await this.client.get<TreatmentGoalWithProgress>(`/treatment-goals/${goalId}`)
+    return response.data
+  }
+
+  async updateTreatmentGoal(goalId: number, goalData: TreatmentGoalUpdate): Promise<TreatmentGoal> {
+    const response = await this.client.put<TreatmentGoal>(`/treatment-goals/${goalId}`, goalData)
+    return response.data
+  }
+
+  async deleteTreatmentGoal(goalId: number): Promise<void> {
+    await this.client.delete(`/treatment-goals/${goalId}`)
+  }
+
+  async listPatientGoals(patientId: number, status?: string): Promise<TreatmentGoal[]> {
+    const params = status ? { status } : {}
+    const response = await this.client.get<TreatmentGoal[]>(`/treatment-goals/patient/${patientId}/goals`, { params })
+    return response.data
+  }
+
+  async createGoalProgress(progressData: GoalProgressCreate): Promise<GoalProgress> {
+    const response = await this.client.post<GoalProgress>('/treatment-goals/progress', progressData)
+    return response.data
+  }
+
+  async getGoalProgressHistory(goalId: number, limit: number = 20): Promise<GoalProgress[]> {
+    const response = await this.client.get<GoalProgress[]>(`/treatment-goals/progress/${goalId}`, { params: { limit } })
     return response.data
   }
 }

@@ -650,3 +650,197 @@ export interface WaitingRoomEntry {
   message_to_provider: string | null
   technical_issue: string | null
 }
+
+// Phase 5: Progress Tracking & Outcomes Measurement Interfaces
+
+export type AssessmentType =
+  | 'PHQ9'
+  | 'GAD7'
+  | 'CUSTOM'
+  | 'SESSION_RATING'
+  | 'WELLBEING'
+
+export type SeverityLevel =
+  | 'NONE_MINIMAL'
+  | 'MILD'
+  | 'MODERATE'
+  | 'MODERATELY_SEVERE'
+  | 'SEVERE'
+
+export type GoalStatus =
+  | 'ACTIVE'
+  | 'ACHIEVED'
+  | 'DISCONTINUED'
+  | 'ON_HOLD'
+
+export type GoalCategory =
+  | 'SYMPTOM_REDUCTION'
+  | 'FUNCTIONAL_IMPROVEMENT'
+  | 'BEHAVIORAL_CHANGE'
+  | 'RELATIONSHIP_IMPROVEMENT'
+  | 'COPING_SKILLS'
+  | 'MEDICATION_MANAGEMENT'
+  | 'LIFESTYLE_CHANGE'
+  | 'OTHER'
+
+export interface AssessmentQuestionOption {
+  value: number
+  text: string
+}
+
+export interface AssessmentQuestion {
+  question: string
+  options: AssessmentQuestionOption[]
+  reverse_scored: boolean
+}
+
+export interface AssessmentScale {
+  id: number
+  scale_type: AssessmentType
+  scale_name: string
+  scale_code: string
+  description: string | null
+  instructions: string | null
+  min_score: number
+  max_score: number
+  questions: AssessmentQuestion[]
+  severity_thresholds: Record<string, number> | null
+  is_standard: boolean
+  is_active: boolean
+  created_by_provider_id: number | null
+  created_at: string
+  updated_at: string | null
+}
+
+export interface AssessmentScaleListItem {
+  id: number
+  scale_type: string
+  scale_name: string
+  scale_code: string
+  description: string | null
+  min_score: number
+  max_score: number
+  is_standard: boolean
+  is_active: boolean
+}
+
+export interface AssessmentAttemptCreate {
+  scale_id: number
+  responses: number[]
+  appointment_id?: number
+  notes?: string
+  started_at?: string
+}
+
+export interface AssessmentAttempt {
+  id: number
+  patient_id: number
+  scale_id: number
+  appointment_id: number | null
+  responses: number[]
+  total_score: number
+  severity_level: SeverityLevel | null
+  notes: string | null
+  administered_by_provider_id: number | null
+  started_at: string | null
+  completed_at: string
+  created_at: string
+  scale_name: string | null
+  scale_code: string | null
+}
+
+export interface AssessmentScoreHistory {
+  scale_id: number
+  scale_name: string
+  scale_code: string
+  min_score: number
+  max_score: number
+  attempts: AssessmentAttempt[]
+  current_score: number | null
+  previous_score: number | null
+  score_change: number | null
+  trend: 'improving' | 'stable' | 'worsening' | null
+}
+
+export interface ProgressSummary {
+  patient_id: number
+  first_assessment_date: string | null
+  last_assessment_date: string | null
+  total_assessments: number
+  assessment_history: AssessmentScoreHistory[]
+  active_goals_count: number
+  achieved_goals_count: number
+}
+
+export interface TreatmentGoalCreate {
+  patient_id: number
+  category: GoalCategory
+  goal_text: string
+  is_specific?: boolean
+  is_measurable?: boolean
+  target_metric?: string
+  target_value?: number
+  target_date?: string
+  interventions?: string
+}
+
+export interface TreatmentGoalUpdate {
+  goal_text?: string
+  category?: GoalCategory
+  target_metric?: string
+  target_value?: number
+  target_date?: string
+  status?: GoalStatus
+  progress_percentage?: number
+  barriers?: string
+  interventions?: string
+  discontinued_reason?: string
+}
+
+export interface TreatmentGoal {
+  id: number
+  patient_id: number
+  provider_id: number
+  category: GoalCategory
+  goal_text: string
+  is_specific: boolean
+  is_measurable: boolean
+  target_metric: string | null
+  target_value: number | null
+  target_date: string | null
+  status: GoalStatus
+  progress_percentage: number
+  barriers: string | null
+  interventions: string | null
+  achieved_at: string | null
+  discontinued_at: string | null
+  discontinued_reason: string | null
+  created_at: string
+  updated_at: string | null
+}
+
+export interface GoalProgressCreate {
+  goal_id: number
+  progress_percentage: number
+  metric_value?: number
+  progress_notes?: string
+  patient_feedback?: string
+  appointment_id?: number
+}
+
+export interface GoalProgress {
+  id: number
+  goal_id: number
+  recorded_by_provider_id: number
+  appointment_id: number | null
+  progress_percentage: number
+  metric_value: number | null
+  progress_notes: string | null
+  patient_feedback: string | null
+  recorded_at: string
+  created_at: string
+}
+
+export interface TreatmentGoalWithProgress extends TreatmentGoal {
+  recent_progress: GoalProgress[]
+}
