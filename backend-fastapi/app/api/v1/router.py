@@ -17,6 +17,7 @@ from app.api.v1 import (
     video_sessions,
     assessments,
     treatment_goals,
+    gamification,
 )
 
 api_router = APIRouter()
@@ -46,6 +47,7 @@ api_router.include_router(video_sessions.router, prefix="/video-sessions", tags=
 # Progress tracking routes (Phase 5)
 api_router.include_router(assessments.router, prefix="/assessments", tags=["Assessments"])
 api_router.include_router(treatment_goals.router, prefix="/treatment-goals", tags=["Treatment Goals"])
+api_router.include_router(gamification.router, prefix="/gamification", tags=["Gamification"])
 
 # Reference data routes
 api_router.include_router(specialties.router, tags=["Reference Data"])

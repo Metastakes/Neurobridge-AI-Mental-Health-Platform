@@ -53,6 +53,18 @@ from app.models.assessment import (
     GoalCategory,
 )
 
+# Phase 5 Enhancement: Gamification
+from app.models.gamification import (
+    Achievement,
+    PatientAchievement,
+    PatientStreak,
+    Milestone,
+    PatientMilestone,
+    MotivationalMessage,
+    AchievementCategory,
+    AchievementTier,
+)
+
 __all__ = [
     # Enums
     "UserRole",
@@ -108,4 +120,13 @@ __all__ = [
     "SeverityLevel",
     "GoalStatus",
     "GoalCategory",
+    # Phase 5 Gamification Models
+    "Achievement",
+    "PatientAchievement",
+    "PatientStreak",
+    "Milestone",
+    "PatientMilestone",
+    "MotivationalMessage",
+    "AchievementCategory",
+    "AchievementTier",
 ]
