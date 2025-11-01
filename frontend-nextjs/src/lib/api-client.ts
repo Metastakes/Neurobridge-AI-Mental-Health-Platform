@@ -51,6 +51,11 @@ import type {
   TreatmentGoalWithProgress,
   GoalProgressCreate,
   GoalProgress,
+  PatientStreak,
+  StreakUpdate,
+  Achievement,
+  PatientAchievement,
+  GamificationDashboard,
 } from '@/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -605,6 +610,37 @@ class ApiClient {
 
   async getGoalProgressHistory(goalId: number, limit: number = 20): Promise<GoalProgress[]> {
     const response = await this.client.get<GoalProgress[]>(`/treatment-goals/progress/${goalId}`, { params: { limit } })
+    return response.data
+  }
+
+  // Gamification
+  async getPatientStreak(): Promise<PatientStreak> {
+    const response = await this.client.get<PatientStreak>('/gamification/streak')
+    return response.data
+  }
+
+  async updateStreak(): Promise<StreakUpdate> {
+    const response = await this.client.post<StreakUpdate>('/gamification/streak/update')
+    return response.data
+  }
+
+  async listAchievements(category?: string): Promise<Achievement[]> {
+    const params = category ? { category } : {}
+    const response = await this.client.get<Achievement[]>('/gamification/achievements', { params })
+    return response.data
+  }
+
+  async getUnlockedAchievements(): Promise<PatientAchievement[]> {
+    const response = await this.client.get<PatientAchievement[]>('/gamification/achievements/unlocked')
+    return response.data
+  }
+
+  async markAchievementViewed(achievementId: number): Promise<void> {
+    await this.client.post(`/gamification/achievements/${achievementId}/view`)
+  }
+
+  async getGamificationDashboard(): Promise<GamificationDashboard> {
+    const response = await this.client.get<GamificationDashboard>('/gamification/dashboard')
     return response.data
   }
 }

@@ -844,3 +844,87 @@ export interface GoalProgress {
 export interface TreatmentGoalWithProgress extends TreatmentGoal {
   recent_progress: GoalProgress[]
 }
+
+// Phase 5 Enhancement: Gamification Interfaces
+
+export type AchievementCategory =
+  | 'ASSESSMENT'
+  | 'STREAK'
+  | 'PROGRESS'
+  | 'GOAL'
+  | 'ENGAGEMENT'
+
+export type AchievementTier =
+  | 'BRONZE'
+  | 'SILVER'
+  | 'GOLD'
+  | 'PLATINUM'
+  | 'DIAMOND'
+
+export interface Achievement {
+  id: number
+  name: string
+  description: string
+  icon: string
+  category: AchievementCategory
+  tier: AchievementTier
+  unlock_criteria: Record<string, any>
+  points: number
+  color: string | null
+  is_hidden: boolean
+  is_active: boolean
+  created_at: string
+}
+
+export interface PatientAchievement {
+  id: number
+  patient_id: number
+  achievement_id: number
+  unlocked_at: string
+  is_viewed: boolean
+  trigger_context: Record<string, any> | null
+  achievement: Achievement
+}
+
+export interface PatientStreak {
+  id: number
+  patient_id: number
+  current_streak_days: number
+  longest_streak_days: number
+  last_assessment_date: string | null
+  current_streak_weeks: number
+  longest_streak_weeks: number
+  total_assessment_count: number
+  total_session_count: number
+  engagement_score: number
+  created_at: string
+  updated_at: string | null
+}
+
+export interface StreakUpdate {
+  streak: PatientStreak
+  streak_broken: boolean
+  streak_maintained: boolean
+  new_record: boolean
+  achievements_unlocked: Achievement[]
+  motivational_message: string | null
+}
+
+export interface GamificationDashboard {
+  patient_id: number
+  streak: PatientStreak
+  streak_status: 'active' | 'at_risk' | 'broken'
+  next_streak_milestone: number | null
+  total_achievements: number
+  unlocked_achievements: number
+  recent_achievements: PatientAchievement[]
+  next_achievement: Achievement | null
+  total_milestones: number
+  achieved_milestones: number
+  milestone_progress: any[]
+  total_points: number
+  current_level: number
+  points_to_next_level: number
+  motivational_message: string | null
+  motivational_icon: string | null
+}
