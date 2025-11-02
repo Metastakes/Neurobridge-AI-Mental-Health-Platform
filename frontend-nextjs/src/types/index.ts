@@ -928,3 +928,168 @@ export interface GamificationDashboard {
   motivational_message: string | null
   motivational_icon: string | null
 }
+
+// Phase 5 Enhancement: Medication Education & Rewards Interfaces
+
+export type RewardCategory =
+  | 'VITAMINS'
+  | 'FITNESS_GEAR'
+  | 'HEALTHY_SNACKS'
+  | 'WELLNESS_BOOKS'
+  | 'MEDITATION_APPS'
+  | 'GYM_MEMBERSHIP'
+  | 'MEAL_PREP'
+  | 'OTHER'
+
+export type RedemptionStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'SHIPPED'
+  | 'DELIVERED'
+  | 'CANCELLED'
+
+export interface PrescribedMedication {
+  id: number
+  patient_id: number
+  provider_id: number
+  medication_name: string
+  dosage: string | null
+  frequency: string | null
+  instructions: string | null
+  prescribed_date: string
+  start_date: string | null
+  end_date: string | null
+  requires_quiz: boolean
+  quiz_completed: boolean
+  quiz_completed_at: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string | null
+}
+
+export interface MedicationQuizQuestion {
+  id: number
+  medication_name: string
+  question: string
+  question_type: string
+  options: Record<string, string>
+  correct_answer: string
+  explanation: string
+  is_critical: boolean
+  is_active: boolean
+  created_at: string
+}
+
+export interface QuizAnswerSubmit {
+  question_id: number
+  selected_answer: string
+}
+
+export interface MedicationQuizSubmit {
+  prescribed_medication_id: number
+  responses: QuizAnswerSubmit[]
+  started_at?: string
+}
+
+export interface QuizResponseDetail {
+  question_id: number
+  question: string
+  selected: string
+  correct: string
+  is_correct: boolean
+  explanation: string
+  is_critical: boolean
+}
+
+export interface MedicationQuizResult {
+  attempt_id: number
+  prescribed_medication_id: number
+  medication_name: string
+  total_questions: number
+  correct_answers: number
+  score_percentage: number
+  passed: boolean
+  points_earned: number
+  responses: QuizResponseDetail[]
+  completed_at: string
+}
+
+export interface RewardItem {
+  id: number
+  name: string
+  description: string
+  category: RewardCategory
+  brand_name: string | null
+  is_partner: boolean
+  points_cost: number
+  image_url: string | null
+  stock_quantity: number | null
+  max_per_user: number | null
+  is_available: boolean
+  is_active: boolean
+  is_featured: boolean
+  display_order: number
+  terms_conditions: string | null
+  created_at: string
+  updated_at: string | null
+}
+
+export interface RewardRedeemRequest {
+  reward_item_id: number
+  quantity: number
+  shipping_address?: Record<string, any>
+}
+
+export interface RewardRedemption {
+  id: number
+  patient_id: number
+  reward_item_id: number
+  reward_name: string
+  points_spent: number
+  quantity: number
+  status: RedemptionStatus
+  requires_shipping: boolean
+  tracking_number: string | null
+  redeemed_at: string
+}
+
+export interface PatientPoints {
+  id: number
+  patient_id: number
+  current_balance: number
+  total_points_earned: number
+  total_points_spent: number
+  total_redemptions: number
+  created_at: string
+  updated_at: string | null
+}
+
+export interface PointsTransaction {
+  id: number
+  patient_points_id: number
+  patient_id: number
+  transaction_type: string
+  points: number
+  balance_after: number
+  description: string
+  reference_id: number | null
+  reference_type: string | null
+  created_at: string
+}
+
+export interface PointsEarningSummary {
+  available_tasks: Array<{
+    task: string
+    points: number
+    icon: string
+  }>
+  total_available_points: number
+}
+
+export interface RewardsMarketplace {
+  patient_points: PatientPoints
+  featured_rewards: RewardItem[]
+  all_rewards: RewardItem[]
+  recent_redemptions: RewardRedemption[]
+  points_earning_guide: PointsEarningSummary
+}

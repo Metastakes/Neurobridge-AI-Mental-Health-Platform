@@ -65,6 +65,19 @@ from app.models.gamification import (
     AchievementTier,
 )
 
+# Phase 5 Enhancement: Medication Education & Rewards
+from app.models.medication_rewards import (
+    PrescribedMedication,
+    MedicationQuizQuestion,
+    MedicationQuizAttempt,
+    RewardItem,
+    RewardRedemption,
+    PatientPoints,
+    PointsTransaction,
+    RewardCategory,
+    RedemptionStatus,
+)
+
 __all__ = [
     # Enums
     "UserRole",
@@ -129,4 +142,14 @@ __all__ = [
     "MotivationalMessage",
     "AchievementCategory",
     "AchievementTier",
+    # Phase 5 Medication & Rewards Models
+    "PrescribedMedication",
+    "MedicationQuizQuestion",
+    "MedicationQuizAttempt",
+    "RewardItem",
+    "RewardRedemption",
+    "PatientPoints",
+    "PointsTransaction",
+    "RewardCategory",
+    "RedemptionStatus",
 ]

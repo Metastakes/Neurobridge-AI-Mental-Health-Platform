@@ -643,6 +643,45 @@ class ApiClient {
     const response = await this.client.get<GamificationDashboard>('/gamification/dashboard')
     return response.data
   }
+
+  // Medication Education & Rewards
+  async getMedicationQuiz(medicationId: number): Promise<MedicationQuizQuestion[]> {
+    const response = await this.client.get<MedicationQuizQuestion[]>(`/medication-rewards/medications/${medicationId}/quiz`)
+    return response.data
+  }
+
+  async submitMedicationQuiz(quizData: MedicationQuizSubmit): Promise<MedicationQuizResult> {
+    const response = await this.client.post<MedicationQuizResult>('/medication-rewards/medications/quiz/submit', quizData)
+    return response.data
+  }
+
+  async listRewards(category?: string, featuredOnly: boolean = false): Promise<RewardItem[]> {
+    const params: any = {}
+    if (category) params.category = category
+    if (featuredOnly) params.featured_only = featuredOnly
+    const response = await this.client.get<RewardItem[]>('/medication-rewards/rewards', { params })
+    return response.data
+  }
+
+  async getRewardsMarketplace(): Promise<RewardsMarketplace> {
+    const response = await this.client.get<RewardsMarketplace>('/medication-rewards/rewards/marketplace')
+    return response.data
+  }
+
+  async redeemReward(redeemData: RewardRedeemRequest): Promise<RewardRedemption> {
+    const response = await this.client.post<RewardRedemption>('/medication-rewards/rewards/redeem', redeemData)
+    return response.data
+  }
+
+  async getPatientPoints(): Promise<PatientPoints> {
+    const response = await this.client.get<PatientPoints>('/medication-rewards/points')
+    return response.data
+  }
+
+  async getPointsTransactions(limit: number = 50): Promise<PointsTransaction[]> {
+    const response = await this.client.get<PointsTransaction[]>('/medication-rewards/points/transactions', { params: { limit } })
+    return response.data
+  }
 }
 
 // Export singleton instance
