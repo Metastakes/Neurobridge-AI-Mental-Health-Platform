@@ -1,39 +1,94 @@
 // App.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 // Fix: Add file extensions to imports to resolve module errors.
+import ErrorBoundary from './components/ErrorBoundary.tsx';
 import LoginScreen from './components/LoginScreen.tsx';
-import PatientApp from './components/PatientApp.tsx';
-import ProviderDashboard from './components/ProviderDashboard.tsx';
-import MentorDashboard from './components/MentorDashboard.tsx';
+import PatientAppWrapper from './components/PatientAppWrapper.tsx';
+import ProviderDashboardWrapper from './components/ProviderDashboardWrapper.tsx';
+import MentorDashboardWrapper from './components/MentorDashboardWrapper.tsx';
 import HIPAADisclaimerModal from './components/HIPAADisclaimerModal.tsx';
-import { users as initialUsers, initialChatHistories } from './userData.ts';
-import { User, Patient, Provider, Mentor, ChatMessage } from './types.ts';
+import { initialChatHistories } from './userData.ts';
+import { User, ChatMessage } from './types.ts';
 import { GoogleApiProvider } from './GoogleApiContext.tsx';
 import { ThemeProvider } from './ThemeContext.tsx';
+import { authApi, tokenManager } from './utils/api.ts';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>(initialUsers);
   const [chats, setChats] = useState<Record<string, ChatMessage[]>>(initialChatHistories);
   const [showHIPAADisclaimer, setShowHIPAADisclaimer] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const allPatients = useMemo(() => allUsers.filter(u => u.role === 'patient') as Patient[], [allUsers]);
-  const allProviders = useMemo(() => allUsers.filter(u => u.role === 'provider') as Provider[], [allUsers]);
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const token = tokenManager.getAccessToken();
+      if (token) {
+        const response = await authApi.getCurrentUser();
+        if (response.data?.user) {
+          const userData = response.data.user;
+          // Convert backend user format to frontend User type
+          const user: User = {
+            id: userData.id,
+            name: userData.name,
+            email: userData.email,
+            password: '', // Don't store password
+            role: userData.role as 'patient' | 'provider' | 'mentor',
+          };
+          setCurrentUser(user);
 
-
-  const handleLogin = (email: string, pass: string) => {
-    // This is a mock login. In a real app, you'd verify the password.
-    const user = allUsers.find(u => u.email === email && u.password === pass);
-    if (user) {
-      setCurrentUser(user);
-      if (user.role === 'provider' || user.role === 'mentor') {
-        const hasAcknowledged = sessionStorage.getItem('hipaa_acknowledged');
-        if (!hasAcknowledged) {
-            setShowHIPAADisclaimer(true);
+          if (user.role === 'provider' || user.role === 'mentor') {
+            const hasAcknowledged = sessionStorage.getItem('hipaa_acknowledged');
+            if (!hasAcknowledged) {
+              setShowHIPAADisclaimer(true);
+            }
+          }
+        } else {
+          // Token is invalid, clear it
+          tokenManager.clearTokens();
         }
       }
-    } else {
-      alert("Invalid credentials");
+      setIsLoading(false);
+    };
+
+    checkExistingSession();
+  }, []);
+
+  const handleLogin = async (email: string, pass: string) => {
+    setLoginError(null);
+    setIsLoading(true);
+
+    try {
+      const response = await authApi.login(email, pass);
+
+      if (response.data?.user) {
+        const userData = response.data.user;
+        // Convert backend user format to frontend User type
+        const user: User = {
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          password: '', // Don't store password
+          role: userData.role as 'patient' | 'provider' | 'mentor',
+        };
+
+        setCurrentUser(user);
+
+        if (user.role === 'provider' || user.role === 'mentor') {
+          const hasAcknowledged = sessionStorage.getItem('hipaa_acknowledged');
+          if (!hasAcknowledged) {
+            setShowHIPAADisclaimer(true);
+          }
+        }
+      } else {
+        setLoginError(response.error || "Invalid email or password. Please try again.");
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError("An error occurred during login. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -42,8 +97,16 @@ function App() {
     setShowHIPAADisclaimer(false);
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setCurrentUser(null);
+      // Clear HIPAA acknowledgment on logout to ensure new users must accept
+      sessionStorage.removeItem('hipaa_acknowledged');
+    }
   };
 
    const handleUpdatePatientDetails = (updatedPatient: Patient) => {
@@ -68,62 +131,73 @@ function App() {
   };
   
   const renderApp = () => {
-      if (!currentUser) {
-        return <LoginScreen onLogin={handleLogin} />;
+      // Show loading spinner while checking for existing session
+      if (isLoading) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-slate-900">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto"></div>
+              <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+            </div>
+          </div>
+        );
       }
-      
-      const currentPatient = currentUser.role === 'patient' 
-        ? allPatients.find(p => p.id === currentUser.id)
-        // Fix: Corrected a typo in the ternary operator from '-' to ':'.
-        : undefined;
-    
-    
+
+      if (!currentUser) {
+        return <LoginScreen onLogin={handleLogin} error={loginError} />;
+      }
+
       switch (currentUser.role) {
         case 'patient':
-          return currentPatient ? (
-              <PatientApp 
-                patient={currentPatient} 
-                onLogout={handleLogout} 
-                onUpdatePatientDetails={handleUpdatePatientDetails}
-                chats={chats}
-                onSendMessage={handleSendMessage}
-                allUsers={allUsers}
-              />
-          ) : <div>Loading patient data...</div>;
+          return (
+            <PatientAppWrapper
+              currentUser={currentUser}
+              onLogout={handleLogout}
+              onUpdatePatientDetails={handleUpdatePatientDetails}
+              chats={chats}
+              onSendMessage={handleSendMessage}
+            />
+          );
         case 'provider':
-          return <ProviderDashboard 
-                    provider={currentUser as Provider} 
-                    patients={allPatients.filter(p => (currentUser as Provider).patientIds.includes(p.id))}
-                    onLogout={handleLogout}
-                    chats={chats}
-                    onSendMessage={handleSendMessage}
-                 />;
+          return (
+            <ProviderDashboardWrapper
+              currentUser={currentUser}
+              onLogout={handleLogout}
+              chats={chats}
+              onSendMessage={handleSendMessage}
+            />
+          );
         case 'mentor':
-            return <MentorDashboard 
-                    mentor={currentUser as Mentor} 
-                    mentees={allProviders.filter(u => (currentUser as Mentor).menteeIds.includes(u.id))}
-                    onLogout={handleLogout}
-                    chats={chats}
-                    onSendMessage={handleSendMessage}
-                   />;
+          return (
+            <MentorDashboardWrapper
+              currentUser={currentUser}
+              onLogout={handleLogout}
+              chats={chats}
+              onSendMessage={handleSendMessage}
+            />
+          );
         default:
           return <div>Unknown user role.</div>;
       }
   }
 
   return (
-      <ThemeProvider>
-        <GoogleApiProvider>
-          {currentUser && (currentUser.role === 'provider' || currentUser.role === 'mentor') && (
-              <HIPAADisclaimerModal 
-                isOpen={showHIPAADisclaimer}
-                onAcknowledge={handleAcknowledgeHIPAA}
-                userRole={currentUser.role}
-              />
-          )}
-          {renderApp()}
-        </GoogleApiProvider>
-      </ThemeProvider>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <ErrorBoundary>
+            <GoogleApiProvider>
+              {currentUser && (currentUser.role === 'provider' || currentUser.role === 'mentor') && (
+                  <HIPAADisclaimerModal
+                    isOpen={showHIPAADisclaimer}
+                    onAcknowledge={handleAcknowledgeHIPAA}
+                    userRole={currentUser.role}
+                  />
+              )}
+              {renderApp()}
+            </GoogleApiProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
+      </ErrorBoundary>
   )
 }
 

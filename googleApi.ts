@@ -1,7 +1,9 @@
 // googleApi.ts
-// Fix: Add declarations for gapi and google to provide types for the globally available Google API objects.
-declare const gapi: any;
-// Fix: Add namespace declaration for the google object from Google Identity Services to resolve namespace errors.
+/// <reference types="gapi" />
+/// <reference types="gapi.client.calendar-v3" />
+
+// Type declarations for Google Identity Services (GIS)
+// Note: GIS is separate from gapi and doesn't have official TypeScript types yet
 declare namespace google {
     namespace accounts {
         namespace oauth2 {
@@ -25,6 +27,7 @@ declare namespace google {
 
 import { GOOGLE_API_KEY, GOOGLE_CLIENT_ID } from './config.ts';
 import { CalendarEvent } from './types.ts';
+import { v4 as uuidv4 } from 'uuid';
 
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
@@ -111,7 +114,7 @@ export const addCalendarEvent = async (summary: string, startDateTime: string, e
             },
             'conferenceData': {
                 'createRequest': {
-                    'requestId': `neurobridge-${Date.now()}`,
+                    'requestId': `neurobridge-${uuidv4()}`,
                     'conferenceSolutionKey': {
                         'type': 'hangoutsMeet'
                     }
@@ -131,6 +134,20 @@ export const addCalendarEvent = async (summary: string, startDateTime: string, e
         return response.result;
     } catch (error) {
         console.error('Error creating event:', error);
+        throw error;
+    }
+};
+
+export const deleteCalendarEvent = async (eventId: string): Promise<void> => {
+    try {
+        await gapi.client.calendar.events.delete({
+            'calendarId': 'primary',
+            'eventId': eventId,
+            'sendNotifications': true, // Notify attendees of cancellation
+        });
+        console.log('Event deleted:', eventId);
+    } catch (error) {
+        console.error('Error deleting event:', error);
         throw error;
     }
 };

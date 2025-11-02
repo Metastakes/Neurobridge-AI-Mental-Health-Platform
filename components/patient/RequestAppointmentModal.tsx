@@ -1,9 +1,8 @@
 // components/patient/RequestAppointmentModal.tsx
 import React, { useState } from 'react';
-import { useGoogleApi } from '../../GoogleApiContext.tsx';
-import { addCalendarEvent } from '../../googleApi.ts';
 import { Patient, User } from '../../types.ts';
-import { X, Google } from '../Icons.tsx';
+import { X } from '../Icons.tsx';
+import { bookAppointment } from '../../hooks/useAppointments.ts';
 
 interface RequestAppointmentModalProps {
   isOpen: boolean;
@@ -18,11 +17,19 @@ const availableTimes = [
     "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"
 ];
 
+const appointmentTypes = [
+    { value: 'initial_consultation', label: 'Initial Consultation' },
+    { value: 'follow_up', label: 'Follow-up Appointment' },
+    { value: 'therapy_session', label: 'Therapy Session' },
+    { value: 'medication_review', label: 'Medication Review' },
+];
+
 const RequestAppointmentModal: React.FC<RequestAppointmentModalProps> = ({ isOpen, onClose, provider, patient, onAppointmentBooked }) => {
-    const { isSignedIn, signIn, isGapiLoaded, isGisLoaded, initError } = useGoogleApi();
     const [step, setStep] = useState(1);
+    const [appointmentType, setAppointmentType] = useState('therapy_session');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [time, setTime] = useState('');
+    const [notes, setNotes] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -31,25 +38,30 @@ const RequestAppointmentModal: React.FC<RequestAppointmentModalProps> = ({ isOpe
             setError("Please select a date and time.");
             return;
         }
-        
+
         setIsLoading(true);
         setError('');
-        
+
         try {
             const startDateTime = new Date(`${date}T${time}:00`);
             const endDateTime = new Date(startDateTime.getTime() + 50 * 60000); // 50 minute session
 
-            await addCalendarEvent(
-                `Therapy Session: ${provider.name} & ${patient.name}`,
-                startDateTime.toISOString(),
-                endDateTime.toISOString(),
-                provider.email
-            );
-            
-            setStep(3); // Success step
-            onAppointmentBooked();
+            const result = await bookAppointment({
+                providerId: provider.id,
+                appointmentType,
+                scheduledStart: startDateTime.toISOString(),
+                scheduledEnd: endDateTime.toISOString(),
+                notes: notes.trim() || undefined,
+            });
+
+            if (result.success) {
+                setStep(3); // Success step
+                onAppointmentBooked();
+            } else {
+                setError(result.error || "Failed to book appointment. Please try again.");
+            }
         } catch (err) {
-            setError("Failed to create appointment. Please try again.");
+            setError("Failed to book appointment. Please try again.");
             console.error(err);
         } finally {
             setIsLoading(false);
@@ -58,40 +70,17 @@ const RequestAppointmentModal: React.FC<RequestAppointmentModalProps> = ({ isOpe
     
     const handleClose = () => {
         setStep(1);
+        setAppointmentType('therapy_session');
         setTime('');
+        setNotes('');
         setError('');
         setIsLoading(false);
         onClose();
     }
-    
-    if (!isOpen) return null;
-    
-    const renderContent = () => {
-        if (initError) {
-             return (
-                <div className="text-center p-8">
-                    <h3 className="font-bold text-lg mb-2 text-red-700 dark:text-red-300">Booking Error</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">The appointment booking service is currently unavailable due to a configuration issue. Please contact support.</p>
-                </div>
-            );
-        }
 
-        if (!isGapiLoaded || !isGisLoaded) {
-            return <div className="text-center p-8 dark:text-gray-300">Loading Google Services...</div>
-        }
-        
-        if (!isSignedIn) {
-             return (
-                 <div className="text-center p-8">
-                     <h3 className="font-bold text-lg mb-2 dark:text-gray-200">Sign in to book</h3>
-                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Please sign in with your Google account to create a calendar event for your appointment.</p>
-                     <button onClick={signIn} className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600">
-                        <Google className="w-5 h-5 bg-white rounded-full p-0.5" /> Sign in with Google
-                    </button>
-                 </div>
-             )
-        }
-        
+    if (!isOpen) return null;
+
+    const renderContent = () => {
         switch (step) {
             case 1: // Form
                 return (
@@ -99,25 +88,69 @@ const RequestAppointmentModal: React.FC<RequestAppointmentModalProps> = ({ isOpe
                         <h3 className="font-bold text-lg mb-4 dark:text-gray-200">Request Appointment with {provider?.name}</h3>
                         <div className="space-y-4">
                             <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Appointment Type</label>
+                                <select
+                                    value={appointmentType}
+                                    onChange={e => setAppointmentType(e.target.value)}
+                                    className="mt-1 block w-full p-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 dark:text-gray-200"
+                                >
+                                    {appointmentTypes.map(type => (
+                                        <option key={type.value} value={type.value}>{type.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
-                                <input type="date" value={date} onChange={e => setDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className="mt-1 block w-full p-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 dark:text-gray-200" />
+                                <input
+                                    type="date"
+                                    value={date}
+                                    onChange={e => setDate(e.target.value)}
+                                    min={new Date().toISOString().split('T')[0]}
+                                    className="mt-1 block w-full p-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 dark:text-gray-200"
+                                />
                             </div>
                              <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Time</label>
                                  <div className="grid grid-cols-4 gap-2 mt-1">
                                     {availableTimes.map(t => (
-                                        <button key={t} onClick={() => setTime(t)} className={`p-2 rounded-md text-sm ${time === t ? 'bg-teal-500 text-white' : 'bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600'}`}>
+                                        <button
+                                            key={t}
+                                            onClick={() => setTime(t)}
+                                            type="button"
+                                            className={`p-2 rounded-md text-sm ${time === t ? 'bg-teal-500 text-white' : 'bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600'}`}
+                                        >
                                             {new Date(`1970-01-01T${t}:00`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                         </button>
                                     ))}
                                  </div>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes (Optional)</label>
+                                <textarea
+                                    value={notes}
+                                    onChange={e => setNotes(e.target.value)}
+                                    rows={3}
+                                    placeholder="Any additional information about your appointment..."
+                                    className="mt-1 block w-full p-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 dark:text-gray-200"
+                                />
+                            </div>
                         </div>
                         {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
                         <div className="mt-6 flex justify-end gap-2">
-                             <button onClick={handleClose} className="px-4 py-2 bg-gray-200 dark:bg-slate-600 dark:text-gray-200 rounded-md">Cancel</button>
-                             <button onClick={handleBooking} disabled={!time || isLoading} className="px-4 py-2 bg-teal-500 text-white rounded-md disabled:bg-gray-400">
-                                {isLoading ? 'Booking...' : 'Book and Invite'}
+                             <button
+                                onClick={handleClose}
+                                type="button"
+                                className="px-4 py-2 bg-gray-200 dark:bg-slate-600 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-slate-500"
+                            >
+                                Cancel
+                            </button>
+                             <button
+                                onClick={handleBooking}
+                                disabled={!time || isLoading}
+                                type="button"
+                                className="px-4 py-2 bg-teal-500 text-white rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-teal-600"
+                            >
+                                {isLoading ? 'Booking...' : 'Book Appointment'}
                             </button>
                         </div>
                     </div>
@@ -126,11 +159,21 @@ const RequestAppointmentModal: React.FC<RequestAppointmentModalProps> = ({ isOpe
                  return (
                      <div className="text-center p-8">
                          <div className="text-5xl mb-3">✅</div>
-                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Appointment Requested!</h3>
-                        <p className="text-gray-600 dark:text-gray-400 mt-2">An invitation has been sent to {provider?.name} and added to your Google Calendar.</p>
-                        <button onClick={handleClose} className="mt-6 w-full bg-gray-200 dark:bg-slate-600 dark:text-gray-200 py-2 rounded font-semibold hover:bg-gray-300 dark:hover:bg-slate-500">Close</button>
+                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Appointment Booked!</h3>
+                        <p className="text-gray-600 dark:text-gray-400 mt-2">
+                            Your appointment with {provider?.name} has been successfully scheduled.
+                        </p>
+                        <button
+                            onClick={handleClose}
+                            type="button"
+                            className="mt-6 w-full bg-gray-200 dark:bg-slate-600 dark:text-gray-200 py-2 rounded font-semibold hover:bg-gray-300 dark:hover:bg-slate-500"
+                        >
+                            Close
+                        </button>
                     </div>
                  );
+            default:
+                return null;
         }
     }
 

@@ -1,12 +1,13 @@
 // components/provider/ProviderPatientDetail.tsx
 import React, { useState } from 'react';
 // Fix: Add file extensions to imports to resolve module errors.
-import { Patient, Provider, ChatMessage } from '../../types.ts';
+import { Patient, Provider, ChatMessage, CaseNote } from '../../types.ts';
 import { diagnosticTools } from '../../diagnosticToolsData.ts';
 import ProviderMessages from './ProviderMessages.tsx';
 import CaseNotesHistory from './CaseNotesHistory.tsx';
 import DiagnosticToolModal from './DiagnosticToolModal.tsx';
 import AIClinicalSOAPNote from './AIClinicalSOAPNote.tsx';
+import AddSessionNoteModal from './AddSessionNoteModal.tsx';
 import { Zap } from '../Icons.tsx';
 import SecureSessionModal from '../SecureSessionModal.tsx';
 
@@ -21,7 +22,9 @@ const ProviderPatientDetail: React.FC<ProviderPatientDetailProps> = ({ patient, 
     const [isToolModalOpen, setIsToolModalOpen] = useState(false);
     const [isSOAPModalOpen, setIsSOAPModalOpen] = useState(false);
     const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
+    const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
     const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
+    const [notesRefreshTrigger, setNotesRefreshTrigger] = useState(0);
 
     const patientProviderChatId = `chat_${patient.id}_${provider.id}`;
     const chatHistory = chats[patientProviderChatId] || [];
@@ -31,6 +34,17 @@ const ProviderPatientDetail: React.FC<ProviderPatientDetailProps> = ({ patient, 
     const openTool = (id: string) => {
         setSelectedToolId(id);
         setIsToolModalOpen(true);
+    };
+
+    const handleSaveNote = (note: CaseNote) => {
+        // Save to localStorage
+        const storedNotes = localStorage.getItem(`caseNotes_${patient.id}`);
+        const savedNotes: CaseNote[] = storedNotes ? JSON.parse(storedNotes) : [];
+        savedNotes.unshift(note); // Add to beginning
+        localStorage.setItem(`caseNotes_${patient.id}`, JSON.stringify(savedNotes));
+
+        // Trigger refresh of notes list
+        setNotesRefreshTrigger(prev => prev + 1);
     };
 
     return (
@@ -46,10 +60,16 @@ const ProviderPatientDetail: React.FC<ProviderPatientDetailProps> = ({ patient, 
                 onClose={() => setIsSOAPModalOpen(false)}
                 patient={patient}
             />
-            <SecureSessionModal 
+            <SecureSessionModal
                 isOpen={isSessionModalOpen}
                 onClose={() => setIsSessionModalOpen(false)}
                 patientName={patient.name}
+            />
+            <AddSessionNoteModal
+                isOpen={isAddNoteModalOpen}
+                onClose={() => setIsAddNoteModalOpen(false)}
+                patient={patient}
+                onSaveNote={handleSaveNote}
             />
 
             <div className="lg:col-span-2 space-y-6">
@@ -61,7 +81,11 @@ const ProviderPatientDetail: React.FC<ProviderPatientDetailProps> = ({ patient, 
                          <button onClick={() => setIsSOAPModalOpen(true)} className="bg-yellow-400 text-white px-3 py-1.5 text-sm font-semibold rounded-lg hover:bg-yellow-500 flex items-center gap-1"><Zap className="w-4 h-4"/> Gen SOAP Note</button>
                     </div>
                 </div>
-                <CaseNotesHistory patientId={patient.id} onAddNote={() => setIsSOAPModalOpen(true)} />
+                <CaseNotesHistory
+                    patientId={patient.id}
+                    onAddNote={() => setIsAddNoteModalOpen(true)}
+                    refreshTrigger={notesRefreshTrigger}
+                />
 
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Diagnostic Tools</h3>

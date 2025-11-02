@@ -2,17 +2,30 @@
 import React, { useState } from 'react';
 // Fix: Add file extensions to imports to resolve module errors.
 import { Zap } from './Icons.tsx';
+import { loginSchema, validateData } from '../validation/schemas.ts';
 
 interface LoginScreenProps {
   onLogin: (email: string, pass: string) => void;
+  error?: string | null;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, error }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setValidationErrors({});
+
+        // Validate input
+        const validation = validateData(loginSchema, { email, password });
+
+        if (!validation.success) {
+            setValidationErrors(validation.errors || {});
+            return;
+        }
+
         onLogin(email, password);
     };
 
@@ -34,26 +47,45 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
                 <label className="text-sm font-semibold text-gray-600">Email</label>
-                <input 
+                <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full mt-1 p-3 border border-gray-300 rounded-lg"
+                    onChange={(e) => {
+                        setEmail(e.target.value);
+                        setValidationErrors(prev => ({ ...prev, email: '' }));
+                    }}
+                    className={`w-full mt-1 p-3 border rounded-lg ${
+                        validationErrors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                     placeholder="user@example.com"
                 />
+                {validationErrors.email && (
+                    <p className="text-xs text-red-600 mt-1">{validationErrors.email}</p>
+                )}
             </div>
              <div>
                 <label className="text-sm font-semibold text-gray-600">Password</label>
-                <input 
+                <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full mt-1 p-3 border border-gray-300 rounded-lg"
+                    onChange={(e) => {
+                        setPassword(e.target.value);
+                        setValidationErrors(prev => ({ ...prev, password: '' }));
+                    }}
+                    className={`w-full mt-1 p-3 border rounded-lg ${
+                        validationErrors.password ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                     placeholder="********"
                 />
+                {validationErrors.password && (
+                    <p className="text-xs text-red-600 mt-1">{validationErrors.password}</p>
+                )}
             </div>
+            {error && (
+                <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                    {error}
+                </div>
+            )}
             <button type="submit" className="w-full bg-indigo-500 text-white font-bold py-3 rounded-lg hover:bg-indigo-600">
                 Login
             </button>
