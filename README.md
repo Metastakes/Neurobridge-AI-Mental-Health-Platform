@@ -17,6 +17,7 @@
 
 - [Overview](#overview)
 - [Key Features](#key-features)
+- [Documentation](#documentation)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
 - [Branch Strategy](#branch-strategy)
@@ -64,6 +65,21 @@ The platform features three distinct interfaces:
 - 🎓 **Provider Onboarding**: Guide new providers through the platform
 - 📚 **Resource Library**: Best practices and training materials
 - 💬 **Communication Tools**: Direct messaging and consultation scheduling
+
+---
+
+## 📚 Documentation
+
+We've created comprehensive guides to help you navigate the project:
+
+| Document | Purpose | Best For |
+|----------|---------|----------|
+| 📘 [README.md](./README.md) | Project overview and main documentation | Everyone - start here |
+| 🌳 [BRANCHES.md](./BRANCHES.md) | Detailed branch structure and strategy | Understanding development workflow |
+| 🎓 [QUICK_START_FOR_BEGINNERS.md](./QUICK_START_FOR_BEGINNERS.md) | Simple setup guide with troubleshooting | New developers and beginners |
+| 🏷️ [REPOSITORY_RENAME_GUIDE.md](./REPOSITORY_RENAME_GUIDE.md) | Instructions for renaming the repository | Repository administrators |
+
+**New to the project?** Start with [QUICK_START_FOR_BEGINNERS.md](./QUICK_START_FOR_BEGINNERS.md) - it's designed specifically for you!
 
 ---
 
