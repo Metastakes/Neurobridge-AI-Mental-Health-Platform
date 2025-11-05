@@ -16,6 +16,9 @@ supabase==2.5.0
 # Email
 resend==2.0.0
 
+# Payment Processing
+stripe==9.5.0
+
 # Utilities
 aiofiles==23.2.1
 python-jose[cryptography]==3.3.0

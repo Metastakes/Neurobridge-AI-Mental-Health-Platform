@@ -8,6 +8,7 @@ import socketio
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
+from app.routes import subscription_router
 
 load_dotenv()
 
@@ -34,6 +35,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routes
+app.include_router(subscription_router)
 
 # In-memory session storage (will be deleted after session ends)
 active_sessions = {}
